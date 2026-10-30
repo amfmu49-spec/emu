@@ -1,0 +1,1741 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="data:," />
+    <title>絵mu（えみゅ）— 写真からSunoスタイルプロンプトを作る</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Zen+Kaku+Gothic+New:wght@500;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+      :root{
+        color-scheme: dark;
+        /* ページ全体の地はロゴと同じ純黒 #000。ロゴ帯と地続きになる */
+        --bg:#000000;
+        --bg-soft:#0A0A0A;
+        --surface:#121212;
+        --surface-2:#1C1C1A;
+        --surface-3:#0A0A0A;
+        --line:#2E2E2B;
+        --line-strong:#F0F0E9;
+        --ink:#F2F2EC;
+        --ink-2:#C4C4BA;
+        --ink-3:#9C9C94;
+        --accent:#FF5A26;
+        --accent-hover:#FF7040;
+        --accent-soft:#3A1E12;
+        --accent-ink:#FFFFFF;
+        --ok:#7ED3A0;
+        --ok-bg:#14261B;
+        --warn:#E8C268;
+        --warn-bg:#2E2612;
+        --err:#FF9A8E;
+        --code-ink:#ECECE4;
+        --invert:#F0F0E9;
+        --invert-ink:#111110;
+        --invert-2:#E2E2DA;
+        --invert-line:#D0D0C6;
+        --sans:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+        --display:"Archivo","Zen Kaku Gothic New",system-ui,sans-serif;
+        --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+      }
+      *{box-sizing:border-box}
+      html{scroll-behavior:smooth;background:#000}
+      body{margin:0;background:#000;color:var(--ink);font-family:var(--sans);font-weight:500;line-height:1.75;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+      ::selection{background:var(--accent);color:#fff}
+      button{font-family:inherit;cursor:pointer}
+      button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+      .wrap{max-width:1180px;margin:0 auto;padding:0 28px 80px}
+      @media (max-width:560px){.wrap{padding:0 16px 56px}}
+
+      /* ---------- masthead / logo ---------- */
+      .masthead{background:#000;line-height:0;overflow:hidden}
+      .masthead-inner{max-width:1180px;margin:0 auto;padding:16px 28px 0;background:#000}
+      @media (max-width:560px){.masthead-inner{padding:10px 16px 0}}
+      .logo-img{display:block;width:100%;height:auto}
+
+      /* ---------- hero ---------- */
+      header.top{padding:20px 0 0;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:40px;align-items:stretch}
+      @media (max-width:860px){header.top{grid-template-columns:1fr;gap:28px;padding-top:14px}}
+      .hero-eyebrow{display:flex;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);border-top:1px solid var(--line-strong);padding-top:10px;margin-bottom:22px}
+      .hero-eyebrow b{color:var(--accent);font-weight:600}
+      h1{font-family:var(--sans);font-size:clamp(44px,6.2vw,76px);line-height:1.04;font-weight:900;margin:0 0 20px;letter-spacing:-.03em}
+      h1 em{font-style:normal;color:var(--accent)}
+      h1 .h-sub{display:block;font-size:.42em;font-weight:700;letter-spacing:-.01em;line-height:1.35;margin-top:14px;color:var(--ink)}
+      .lead{color:var(--ink-2);font-size:14.5px;line-height:1.95;margin:0;max-width:36em;font-weight:500}
+      .stats{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid var(--line-strong);margin-top:30px;background:var(--surface)}
+      .stat{padding:14px 14px 12px;border-right:1px solid var(--line)}
+      .stat:last-child{border-right:0}
+      .stat b{display:block;font-family:var(--display);font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+      .stat span{display:block;font-size:11px;color:var(--ink-3);margin-top:4px;line-height:1.5}
+      @media (max-width:560px){.stats{grid-template-columns:1fr 1fr}.stat:nth-child(2){border-right:0}.stat:nth-child(1),.stat:nth-child(2){border-bottom:1px solid var(--line)}.hero-eyebrow{flex-direction:column;gap:2px}}
+      .meta{display:none}
+      .hero-visual{position:relative;background:#101010;color:#F5F5F0;overflow:hidden;min-height:300px;display:flex;flex-direction:column;justify-content:space-between;padding:18px;border:1px solid var(--line)}
+      .hv-grid{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(245,245,240,.13) 1px,transparent 1px),linear-gradient(to bottom,rgba(245,245,240,.13) 1px,transparent 1px);background-size:calc(100%/12) calc(100%/12)}
+      .hv-cells{position:absolute;inset:0;background-image:linear-gradient(to right,rgba(245,245,240,.05) 1px,transparent 1px),linear-gradient(to bottom,rgba(245,245,240,.05) 1px,transparent 1px);background-size:calc(100%/36) calc(100%/36)}
+      .hv-scan{position:absolute;left:0;right:0;height:2px;background:var(--accent);top:38%;box-shadow:0 0 0 1px rgba(255,61,0,.25),0 -28px 44px rgba(255,61,0,.28)}
+      .hv-top,.hv-bottom{position:relative;display:flex;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(245,245,240,.62)}
+      .hv-num{position:relative;font-family:var(--display);font-weight:900;font-size:clamp(84px,10vw,128px);line-height:.9;letter-spacing:-.05em}
+      .hv-num small{font-size:.28em;font-weight:800;color:var(--accent);letter-spacing:0;vertical-align:top}
+      .hv-dots{position:relative;display:flex;gap:6px}
+      .hv-dots i{width:22px;height:22px;display:block}
+      @media (max-width:860px){.hero-visual{min-height:230px}}
+
+      /* ---------- layout ---------- */
+      .grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:20px;margin-top:28px;align-items:start}
+      @media (max-width:920px){.grid{grid-template-columns:1fr}}
+      .panel{background:var(--surface);border:1.5px solid var(--line-strong);border-radius:3px;padding:24px;box-shadow:6px 6px 0 var(--line-strong)}
+      @media (max-width:560px){.panel{padding:20px 16px;box-shadow:4px 4px 0 var(--line-strong)}}
+      .panel h2{font-family:var(--sans);font-size:20px;font-weight:900;margin:0 0 4px;display:flex;align-items:center;gap:10px;letter-spacing:-.01em}
+      .panel h2 .no{font-family:var(--mono);font-size:11px;font-weight:600;color:#fff;background:var(--accent);padding:3px 7px;line-height:1.4;letter-spacing:.06em}
+      .panel .sub{color:var(--ink-3);font-size:10.5px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;margin:0 0 18px}
+
+      /* ---------- tabs ---------- */
+      .tabs{display:flex;gap:0;border:1.5px solid var(--line-strong);margin-bottom:20px;background:var(--surface)}
+      .tab{flex:1;border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink-3);font-size:13.5px;font-weight:700;padding:11px 4px;display:flex;align-items:center;justify-content:center;gap:7px}
+      .tab:last-child{border-right:0}
+      .tab svg{width:15px;height:15px;flex:none}
+      .tab:hover{color:var(--ink);background:var(--surface-2)}
+      .tab.active{background:var(--ink);color:#000;font-weight:900}
+      .tabpane{display:none}
+      .tabpane.active{display:block}
+
+      /* ---------- camera ---------- */
+      .cambox{position:relative;background:#0B0B0B;border-radius:2px;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--line-strong)}
+      .cambox video{width:100%;height:100%;object-fit:cover;display:block}
+      .cambox .cam-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#A9A99F;font-size:13px;line-height:1.7;text-align:center;padding:20px}
+      .cambox .cam-empty svg{width:36px;height:36px;opacity:.55}
+      .frame-corners{position:absolute;inset:12%;pointer-events:none;display:none}
+      .cambox.live .frame-corners{display:block}
+      .frame-corners i{position:absolute;width:22px;height:22px;border:2px solid #fff}
+      .frame-corners i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}
+      .frame-corners i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}
+      .frame-corners i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}
+      .frame-corners i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}
+      .scanline{position:absolute;left:12%;right:12%;height:2px;background:var(--accent);display:none;animation:scanmove 2.4s ease-in-out infinite}
+      .cambox.live .scanline{display:block}
+      @keyframes scanmove{0%,100%{top:14%}50%{top:84%}}
+      @media (prefers-reduced-motion:reduce){.scanline{animation:none;top:50%}}
+      .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+      .btn{border:1.5px solid var(--line-strong);background:var(--surface);color:var(--ink);font-size:13.5px;font-weight:700;padding:10px 16px;border-radius:2px;display:inline-flex;align-items:center;gap:8px;transition:background .12s,color .12s,transform .12s}
+      .btn svg{width:15px;height:15px}
+      .btn:active{transform:translateY(1px)}
+      .btn.primary{background:var(--ink);border-color:var(--ink);color:#000}
+      .btn.primary:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+      .btn:hover{border-color:var(--line-strong);background:var(--surface-2)}
+      .btn.primary:hover{color:#fff}
+      .btn:disabled{opacity:.35;cursor:not-allowed}
+      .camstatus{font-size:12.5px;color:var(--ink-3);margin-top:10px;min-height:1.5em;line-height:1.6;font-family:var(--mono)}
+      .camstatus.ok{color:var(--ok)}
+      .camstatus.err{color:var(--err)}
+
+      /* ---------- upload ---------- */
+      .drop{border:1.5px dashed var(--ink-3);border-radius:2px;padding:34px 18px;text-align:center;color:var(--ink-2);font-size:13.5px;line-height:1.8;background:var(--surface-2);transition:border-color .12s,background .12s;display:block;cursor:pointer}
+      .drop:hover{border-color:var(--ink)}
+      .drop.drag{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+      .drop svg{width:30px;height:30px;margin-bottom:10px;opacity:.55}
+      .drop input{display:none}
+      .drop .pick{color:var(--accent);font-weight:900;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+      /* ---------- text input ---------- */
+      textarea{width:100%;background:var(--surface-2);border:1.5px solid var(--line);border-radius:2px;color:var(--ink);font-family:var(--mono);font-size:13.5px;padding:14px;resize:vertical;min-height:100px;line-height:1.7}
+      textarea::placeholder{color:var(--ink-3)}
+      textarea:focus{border-color:var(--line-strong);outline:none}
+      .samples{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;align-items:center}
+      .samples span{font-size:12px;color:var(--ink-3)}
+      .chip{font-family:var(--mono);font-size:11.5px;background:transparent;border:1px solid var(--line);color:var(--ink-2);border-radius:2px;padding:5px 10px}
+      .chip:hover{border-color:var(--line-strong);color:var(--ink)}
+      .genbtn{width:100%;margin-top:16px;justify-content:center;font-size:15px;font-weight:900;padding:15px;border-radius:2px;letter-spacing:.02em}
+
+      /* ---------- output ---------- */
+      .outcol{display:flex;flex-direction:column;gap:16px;min-width:0}
+      .empty{border:1.5px dashed var(--ink-3);border-radius:2px;padding:52px 24px;text-align:center;color:var(--ink-3);background:transparent}
+      .empty svg{width:34px;height:34px;opacity:.4;margin-bottom:12px}
+      .empty p{margin:4px 0;font-size:14px;font-weight:700;color:var(--ink-2)}
+      .empty .mono{font-family:var(--mono);font-size:13px;color:var(--ink-3)}
+
+      .card{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:22px}
+      @media (max-width:560px){.card{padding:18px 16px}}
+      .card h3{font-family:var(--sans);font-size:15px;font-weight:900;margin:0 0 14px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;letter-spacing:.01em}
+      .card h3::before{content:"";width:8px;height:8px;background:var(--accent);flex:none;align-self:center}
+      .card h3 .tag{font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.08em;color:var(--ink-3);text-transform:uppercase}
+      .card h3 .tag::before{content:"/ "}
+      .card h3 .tag.amber,.card h3 .tag.lime{color:var(--ink-3)}
+
+      .rawbox{background:#050505;color:#F0F0E9;border:1px solid var(--line);border-radius:2px;padding:14px 16px;font-family:var(--mono);font-size:13px;word-break:break-all;white-space:pre-wrap;max-height:150px;overflow:auto;line-height:1.7}
+      .rawmeta{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--ink-3)}
+      .rawmeta b{color:var(--ink-2);font-weight:500;font-family:var(--mono);font-size:11.5px}
+      .safeline{display:flex;gap:7px;align-items:flex-start;margin-top:14px;font-size:12px;line-height:1.7;color:var(--ink-3);border-top:1px solid var(--line);padding-top:12px}
+      .safeline svg{width:13px;height:13px;flex:none;margin-top:4px;color:var(--ink-3)}
+      .safeline.warnline{color:var(--warn)}
+      .safeline.warnline svg{color:var(--warn)}
+      .privacy-note{display:flex;gap:10px;align-items:flex-start;background:var(--ok-bg);border:1px solid var(--line);border-radius:2px;padding:12px 14px;font-size:12.5px;line-height:1.75;color:var(--ink-2);margin:0 0 16px}
+      .privacy-note svg{width:16px;height:16px;flex:none;margin-top:3px;color:var(--ok)}
+      .privacy-note strong{color:var(--ink);font-weight:900}
+
+      .hashgrid{font-family:var(--mono);font-size:12.5px;line-height:2;word-break:break-all;background:#050505;border:1px solid var(--line);border-radius:2px;padding:14px 16px;letter-spacing:.06em;color:#F0F0E9}
+      .hashgrid .b{color:inherit}
+      .verifyline{font-size:12px;color:var(--ink-3);margin-top:10px;font-family:var(--mono)}
+      .verifyline .ok{color:var(--ok);font-weight:600}
+
+      /* summary = inverted answer block */
+      #summaryCard{background:var(--invert);color:var(--invert-ink);border-color:var(--invert)}
+      #summaryCard h3{color:var(--invert-ink)}
+      #summaryCard h3 .tag{color:var(--invert-ink);opacity:.55}
+      .summary-lead{font-family:var(--sans);font-size:19px;line-height:1.55;font-weight:900;margin:0 0 12px;letter-spacing:-.01em}
+      .summary-body{font-size:14px;line-height:1.9;margin:0 0 16px;opacity:.92}
+      .summary-body strong{font-weight:900}
+      .summary-points{margin:0 0 16px;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+      @media (max-width:560px){.summary-points{grid-template-columns:1fr}}
+      .summary-points li{background:var(--invert-2);border:1px solid var(--invert-line);border-radius:2px;padding:10px 12px}
+      .summary-points li span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:.55;margin-bottom:3px}
+      .summary-points li b{display:block;font-size:13.5px;line-height:1.6;font-weight:700}
+      .summary-variants{border-top:1px solid var(--invert-line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+      .summary-variants p{margin:0;font-size:13px;line-height:1.85;opacity:.88}
+      .summary-variants p b{opacity:1}
+      .summary-note{font-size:11.5px;opacity:.55;margin:14px 0 0;line-height:1.7}
+
+      .promptcard{padding:0;overflow:hidden}
+      .promptcard .phead{display:flex;align-items:stretch;gap:0;margin:0;border-bottom:1px solid var(--line)}
+      .promptcard .phead .kind{font-family:var(--display);font-size:22px;font-weight:900;color:#000;background:var(--ink);min-width:52px;display:flex;align-items:center;justify-content:center;line-height:1;padding:12px 0}
+      .promptcard .phead .kind.c2,.promptcard .phead .kind.c3{color:#000;background:var(--ink)}
+      .promptcard .pname{font-family:var(--sans);font-size:17px;font-weight:900;align-self:center;padding-left:14px}
+      .promptcard .pdesc{color:var(--ink-3);font-size:12.5px;margin:0;padding:12px 16px 0}
+      .promptcard .codebox{margin:12px 16px 0}
+      .promptcard .charcount{padding:0 16px 14px}
+      .codebox{position:relative;background:var(--surface-2);border:1px solid var(--line);border-radius:2px}
+      .codebox pre{margin:0;padding:46px 16px 16px;font-family:var(--mono);font-size:13px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:var(--code-ink)}
+      .copybtn{position:absolute;top:8px;right:8px;background:var(--ink);border:1px solid var(--ink);color:#000;border-radius:2px;padding:6px 12px;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:var(--sans);font-weight:700}
+      .copybtn svg{width:13px;height:13px}
+      .copybtn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+      .copybtn.done{background:var(--ok);border-color:var(--ok);color:#fff}
+      .charcount{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:8px;text-align:right}
+
+      table.map{width:100%;border-collapse:collapse;font-size:13px}
+      table.map th{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);text-align:left;padding:8px;border-bottom:1.5px solid var(--line-strong)}
+      table.map td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+      table.map td.mono{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+      table.map td.val{font-weight:900}
+      @media (max-width:560px){
+        table.map thead{display:none}
+        table.map tr{display:block;padding:10px 0;border-bottom:1px solid var(--line)}
+        table.map td{display:block;border:0;padding:2px 8px}
+        table.map td.mono{white-space:normal}
+      }
+
+      .hist{display:flex;flex-direction:column}
+      .histitem{display:flex;gap:12px;align-items:baseline;background:transparent;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:11px 2px;text-align:left;color:var(--ink);width:100%;font-size:12.5px}
+      .histitem:last-child{border-bottom:0}
+      .histitem:hover{color:var(--accent)}
+      .histitem .h{font-family:var(--mono);color:var(--accent);font-size:11px;flex:none;font-weight:600}
+      .histitem .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2);font-family:var(--mono);font-size:11.5px}
+      .histitem .g{margin-left:auto;flex:none;font-size:12px;color:var(--ink);font-weight:900}
+      .histnote{font-size:11.5px;color:var(--ink-3);margin:10px 0 0;line-height:1.7}
+
+      /* ---------- processing ---------- */
+      .processing{display:none;background:#0A0A0A;color:#F0F0E9;border:1px solid var(--line);border-radius:3px;padding:22px;font-family:var(--mono)}
+      .processing.on{display:block}
+      .processing .step{font-size:12.5px;color:rgba(240,240,233,.45);padding:4px 0;display:flex;gap:9px}
+      .processing .step.act{color:#F0F0E9}
+      .processing .step.done{color:#7ED3A0}
+      .processing .livehash{font-size:12px;color:var(--accent);word-break:break-all;min-height:2.6em;margin-top:12px;letter-spacing:.03em;line-height:1.7}
+
+      /* ---------- photo mode ---------- */
+      .subhead{font-family:var(--sans);font-size:14px;font-weight:900;margin:22px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+      .subhead:first-child{margin-top:0;padding-top:0;border-top:0}
+      .pane-lead{font-size:13.5px;color:var(--ink-2);line-height:1.85;margin:0 0 16px}
+      .photo-preview{margin-top:16px}
+      .mosaic-wrap{position:relative;border:1.5px solid var(--line-strong);border-radius:2px;overflow:hidden;background:var(--surface-2);line-height:0}
+      .mosaic-wrap canvas{width:100%;height:auto;image-rendering:pixelated;display:block}
+      .scan-overlay,.scan-overlay-result{position:absolute;inset:0;pointer-events:none;line-height:1.5}
+      .scan-grid{position:absolute;inset:0;opacity:0;transition:opacity .4s ease;background-image:linear-gradient(to right,rgba(255,255,255,.30) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.30) 1px,transparent 1px);background-size:calc(100%/177) calc(100%/177)}
+      .mosaic-wrap.grid-on .scan-grid,.result-mosaic.grid-on .scan-grid{opacity:.38}
+      .mosaic-wrap.scanning .scan-grid,.result-mosaic.scanning .scan-grid{opacity:.85}
+      .scan-beam{position:absolute;left:0;right:0;top:0;height:52px;transform:translateY(-100%);opacity:0;background:linear-gradient(to bottom,rgba(255,61,0,0),rgba(255,61,0,.14) 55%,rgba(255,61,0,.32) 88%);border-bottom:2px solid var(--accent)}
+      .mosaic-wrap.scanning .scan-beam{opacity:1}
+      .scan-hud{position:absolute;left:10px;right:10px;bottom:10px;display:flex;align-items:center;gap:10px;background:#111110;color:#F5F5F0;font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:8px 10px;border-radius:2px;opacity:0;transition:opacity .25s ease}
+      .mosaic-wrap.scanning .scan-hud{opacity:1}
+      .scan-hud span:first-child{flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      @media (max-width:430px){.scan-hud span:first-child{white-space:normal}}
+      .scan-track{flex:1;min-width:36px;height:3px;background:rgba(255,255,255,.24);overflow:hidden}
+      .scan-track i{display:block;height:100%;width:0;background:var(--accent)}
+      .rescan-row{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+      .rescan-row .hint{font-size:12px;color:var(--ink-3)}
+      .result-mosaic{position:relative;line-height:0}
+      .result-mosaic canvas{position:relative}
+      .scan-beam-css{position:absolute;left:0;right:0;top:0;height:2px;background:var(--accent);opacity:0}
+      .result-mosaic.scanning .scan-beam-css{opacity:1;animation:resultSweep 1.15s linear forwards}
+      .result-mosaic.autoplay .scan-beam-css{opacity:1;animation:resultSweepLoop 3.4s ease-in-out infinite}
+      @keyframes resultSweep{from{top:0}to{top:calc(100% - 2px)}}
+      @keyframes resultSweepLoop{0%{top:0;opacity:0}10%{opacity:1}45%{top:calc(100% - 2px);opacity:1}60%{opacity:0}100%{top:0;opacity:0}}
+      @media (prefers-reduced-motion:reduce){
+        .scan-beam-css{animation:none !important;top:50%}
+        .result-mosaic.autoplay .scan-beam-css{animation:none !important}
+        .scan-grid{transition:none}
+        .hv-scan{display:none}
+      }
+      .mosaic-cap{font-size:12px;color:var(--ink-3);margin:8px 0 0;line-height:1.6}
+      .colorchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+      .colorchip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-strong);border-radius:2px;padding:4px 10px 4px 5px;font-family:var(--mono);font-size:11.5px;color:var(--ink);background:var(--surface);font-weight:600}
+      .colorchip i{width:16px;height:16px;display:inline-block;border:1px solid rgba(0,0,0,.15);flex:none}
+      .featlist{margin:14px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px;border-top:1px solid var(--line);padding-top:12px}
+      .featlist dt{color:var(--ink-3);font-family:var(--mono);font-size:11.5px}
+      .featlist dd{margin:0;color:var(--ink);font-weight:700}
+      .photo-result-grid{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start}
+      @media (max-width:560px){.photo-result-grid{grid-template-columns:110px 1fr;gap:14px}}
+      .photo-result-grid canvas{width:100%;height:auto;image-rendering:pixelated;border:1.5px solid var(--line-strong);border-radius:2px;display:block}
+
+      /* ---------- how ---------- */
+      .how{margin-top:56px;border-top:2px solid var(--line-strong);padding-top:20px}
+      .how h2{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);margin:0 0 4px;display:flex;justify-content:space-between}
+      .how h2::after{content:"HOW IT WORKS";color:var(--ink-3)}
+      .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1.5px solid var(--line-strong);background:var(--surface);margin-top:16px}
+      @media (max-width:820px){.steps{grid-template-columns:1fr}}
+      .stepcard{background:transparent;border:0;border-right:1px solid var(--line);border-radius:0;padding:20px;display:block}
+      .stepcard:last-child{border-right:0;border-bottom:0}
+      @media (max-width:820px){.stepcard{border-right:0;border-bottom:1px solid var(--line)}.stepcard:last-child{border-bottom:0}}
+      .stepcard .n{font-family:var(--display);font-size:32px;font-weight:900;color:var(--accent);line-height:1;margin-bottom:12px}
+      .stepcard h3{font-size:15px;margin:0 0 8px;font-weight:900;font-family:var(--sans)}
+      .stepcard p{font-size:13px;color:var(--ink-2);margin:0;line-height:1.85}
+      footer{margin-top:36px;padding:16px 0 0;border-top:2px solid var(--line-strong);color:var(--ink-3);font-family:var(--mono);font-size:11px;letter-spacing:.06em;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;text-transform:uppercase}
+
+      /* ---------- scroll reveal （下へ進むと文字が立ち上がる） ---------- */
+      .rv{opacity:0;transform:translateY(26px);will-change:opacity,transform}
+      .rv.rv-in{opacity:1;transform:translateY(0);transition:opacity .7s ease,transform .9s cubic-bezier(.16,1,.3,1);transition-delay:var(--rv-d,0ms)}
+      .rv-down{transform:translateY(-10px)}
+      .rv-down.rv-in{transform:translateY(0)}
+      .rv-hero{transform:translateY(42px)}
+      .rv-hero.rv-in{transform:translateY(0);transition:opacity .8s ease,transform .95s cubic-bezier(.16,1,.3,1);transition-delay:var(--rv-d,0ms)}
+      /* 生成結果のカードは、結果が表示されるたびに順に立ち上がる */
+      @keyframes emuRise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+      #results:not(.hidden) .card{animation:emuRise .65s cubic-bezier(.16,1,.3,1) both}
+      #results:not(.hidden) #summaryCard{animation-delay:.12s}
+      #results:not(.hidden) .promptcard:nth-child(2){animation-delay:.1s}
+      #results:not(.hidden) .promptcard:nth-child(3){animation-delay:.2s}
+      .photo-preview:not(.hidden){animation:emuRise .55s cubic-bezier(.16,1,.3,1) both}
+      @media (prefers-reduced-motion:reduce){
+        .rv{opacity:1 !important;transform:none !important;transition:none !important}
+        #results:not(.hidden) .card,.photo-preview:not(.hidden){animation:none !important}
+      }
+
+      .toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,80px);opacity:0;visibility:hidden;background:var(--accent);color:#fff;font-weight:900;font-size:13.5px;padding:12px 22px;border-radius:2px;box-shadow:4px 4px 0 rgba(240,240,233,.35);transition:transform .22s ease,opacity .22s ease,visibility .22s;z-index:50;pointer-events:none}
+      .toast.show{transform:translate(-50%,0);opacity:1;visibility:visible}
+      .hidden{display:none !important}
+
+    </style>
+  </head>
+  <body>
+    <div class="masthead">
+      <div class="masthead-inner">
+        <img class="logo-img" src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAEBAQEBAQEBAQEBAQECAgMCAgICAgQDAwIDBQQFBQUEBAQFBgcGBQUHBgQEBgkGBwgICAgIBQYJCgkICgcICAj/2wBDAQEBAQICAgQCAgQIBQQFCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAj/wAARCABeBLYDASEAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD/AD/6KACigApwUscmqjG4CYPoaXY3pQ1ZjUWxtSeX70W0uIbsb0p5QL95WH1qOZNjlFpXIqKYiQR8ZJoKehoAPL96joAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooAKKACigAooACSTk0UAO2N6UAeqtTXYbTG0UhBRQAUUAFFACkknJq3GjtwoO2plPl1N6Ebs0obCQuAI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oTtV81rArmZG29uopuxvSrJHhmHO5aa0jP8AeOaAGU7e3rQA75253VHQBIHx0BH41MtwyjAapnA2p1LKxba6ZurcU37S4Xbv4pLCo7PbogadmOGG1qjLsSSfl981UFynLVr8xCxPTORTaZzhRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUU07ASLIy+9N3f7K/lSsA2immAUUgCimnYCTzX9aYCR0NIB+93PLVHQAUUAFFABRQAUUAKMd80lNu4BS7jndxmkAEg9BikJJ6kmm3cAopAFKMd80AJRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFABRQAUUAFFAH/2Q==" alt="絵mu（えみゅ）" width="1206" height="94" />
+      </div>
+    </div>
+    <div class="wrap">
+
+      <header class="top">
+        <div>
+          <div class="hero-eyebrow"><span><b>●</b>&nbsp; Photo → Suno Style Prompt</span><span>177 × 177 Analysis</span></div>
+          <h1>写真を、<br />曲に<em>する。</em><span class="h-sub">写真から、Suno用のスタイルプロンプトを3つ作る。</span></h1>
+          <p class="lead">写真を正方形に切り取り、QRコードの最大サイズと同じ177×177マスに分けて色を読み取ります。主要な色の割合・明るさ・彩度・色の変化の量から音楽の要素を決め、SHA-256 ハッシュと組み合わせて Suno 用のスタイルプロンプトを3種類生成します。計算は決まった手順だけなので、同じ写真からは毎回まったく同じプロンプトが出ます。QRコードの画像や、コードそのものから作ることもできます。</p>
+          <div class="stats" aria-label="仕様">
+            <div class="stat"><b>177×177</b><span>マスに分割して解析</span></div>
+            <div class="stat"><b>31,329</b><span>マスの色を量子化</span></div>
+            <div class="stat"><b>SHA-256</b><span>ランダム不使用で変換</span></div>
+            <div class="stat"><b>× 3</b><span>プロンプトを生成</span></div>
+          </div>
+          <p style="font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--ink-3);margin:12px 0 0">端末内で処理 · 外部送信なし</p>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="hv-grid"></div><div class="hv-cells"></div><div class="hv-scan"></div>
+          <div class="hv-top"><span>Scan — 177 Rows</span><span>31,329 Cells</span></div>
+          <div>
+            <div class="hv-num">177<small>×177</small></div>
+            <div class="hv-dots" style="margin-top:14px"><i style="background:#FF3D00"></i><i style="background:#F5C518"></i><i style="background:#2E7D5B"></i><i style="background:#3A6EA5"></i><i style="background:#F5F5F0"></i></div>
+          </div>
+          <div class="hv-bottom"><span>Color → Genre / BPM / Key</span><span>SHA-256</span></div>
+        </div>
+      </header>
+
+      <div class="grid">
+        <!-- ============ INPUT ============ -->
+        <section class="panel" aria-label="入力">
+          <h2><span class="no">01</span>入力する</h2>
+          <p class="sub">モード：写真 ／ 画像 ／ コード</p>
+          <div class="privacy-note" role="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            <span><strong>処理はすべて、この端末の中だけで行います。</strong>写真や読み取ったコードを外部に送信したり、保存したりすることはありません。</span>
+          </div>
+
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="photo" role="tab">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              写真
+            </button>
+            <button class="tab" data-tab="image" role="tab">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+              画像
+            </button>
+            <button class="tab" data-tab="code" role="tab">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h.01M12 12h.01M17 12h.01M12 17h.01"/></svg>
+              コード
+            </button>
+          </div>
+
+          <!-- photo -->
+          <div class="tabpane active" id="pane-photo">
+            <p class="pane-lead">景色でも物でも、写真なら何でも使えます。中央を正方形に切り取り、177×177マス（31,329マス）に分けて、各マスの色から特徴を読み取ります。写真を選ぶと、177×177マスのスキャンが自動で始まり、そのまま生成します。画像はこの端末の中だけで処理し、外部に送信したり、保存したりしません。</p>
+            <label class="drop" id="photoDrop">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div>写真をここにドロップ<br /><span class="pick">またはファイルを選ぶ</span></div>
+              <input type="file" id="photoInput" accept="image/*" />
+            </label>
+            <p class="camstatus" id="photoStatus">PNG / JPG などの画像に対応しています</p>
+            <div class="photo-preview hidden" id="photoPreview">
+              <div class="mosaic-wrap" id="mosaicWrap">
+                <canvas id="mosaicCanvas" width="177" height="177"></canvas>
+                <div class="scan-overlay" aria-hidden="true">
+                  <div class="scan-grid"></div>
+                  <div class="scan-beam" id="scanBeam"></div>
+                  <div class="scan-hud"><span id="scanHudText">スキャン中 — 0 / 177 行</span><span class="scan-track"><i id="scanBar"></i></span></div>
+                </div>
+              </div>
+              <div class="rescan-row">
+                <button class="btn" type="button" id="btnRescan">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+                  スキャンを再生
+                </button>
+                <span class="hint">スキャンは自動で再生されます。ボタンでもう一度見ることもできます</span>
+              </div>
+              <p class="mosaic-cap">177×177マスに分けて色を量子化したプレビューです。読み込み時は上から1行ずつスキャンし、終わったあともマスの区切りが薄く残ります。このマスの並びが、そのままハッシュ化の入力になります。</p>
+              <div class="colorchips" id="photoColors"></div>
+              <dl class="featlist" id="photoFeats"></dl>
+            </div>
+          </div>
+
+          <!-- code : camera -->
+          <div class="tabpane" id="pane-code">
+            <h3 class="subhead">カメラで読み取る</h3>
+            <div class="cambox" id="cambox">
+              <video id="video" playsinline muted></video>
+              <div class="cam-empty" id="camEmpty">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8h2v2H7zM11 8h2v2h-2zM15 8h2v2h-2zM7 12h2v2H7zM15 12h2v2h-2zM7 16h2v2H7zM11 16h6v2h-6z"/></svg>
+                <span>「カメラを起動」を押して、<br />QRコードやバーコードを映してください</span>
+              </div>
+              <div class="frame-corners"><i></i><i></i><i></i><i></i></div>
+              <div class="scanline"></div>
+            </div>
+            <div class="btnrow">
+              <button class="btn primary" id="btnCamStart">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                カメラを起動
+              </button>
+              <button class="btn" id="btnCamStop" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>
+                停止
+              </button>
+            </div>
+            <p class="camstatus" id="camStatus">まだ起動していません</p>
+
+            <h3 class="subhead">テキストで入力する</h3>
+            <textarea id="textInput" placeholder="QRコードの内容や、変換したいテキストをここに貼り付けてください"></textarea>
+            <div class="samples">
+              <span>サンプルで試す：</span>
+              <button class="chip" data-sample="4901777018686">バーコード 4901777018686</button>
+              <button class="chip" data-sample="https://example.com/">URL文字列</button>
+              <button class="chip" data-sample="サンプルテキスト">サンプルテキスト</button>
+            </div>
+          </div>
+
+          <!-- image -->
+          <div class="tabpane" id="pane-image">
+            <p class="pane-lead">QRコードやバーコードが写った画像ファイルから、コードの内容を読み取ります。読み取った内容はリンク化せず、テキストとしてだけ扱います。</p>
+            <label class="drop" id="drop">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <div>QRコードの画像をここにドロップ<br /><span class="pick">またはファイルを選ぶ</span></div>
+              <input type="file" id="fileInput" accept="image/*" />
+            </label>
+            <p class="camstatus" id="upStatus">PNG / JPG などの画像に対応しています</p>
+          </div>
+
+          <button class="btn primary genbtn" id="btnGenerate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/><circle cx="12" cy="12" r="3"/></svg>
+            プロンプトを生成
+          </button>
+        </section>
+
+        <!-- ============ OUTPUT ============ -->
+        <div class="outcol">
+          <div class="processing" id="processing">
+            <div class="step" data-s="0">入力を受け付けました</div>
+            <div class="step" data-s="1">SHA-256 でハッシュ化しています</div>
+            <div class="step" data-s="2">ハッシュの値から音楽の要素を選んでいます</div>
+            <div class="step" data-s="3">プロンプトを3種類に組み立てています</div>
+            <div class="livehash" id="liveHash"></div>
+          </div>
+
+          <div class="empty" id="emptyState">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            <p>まだ生成していません</p>
+            <p style="font-size:13px">写真を選ぶと、スキャンが自動で始まって生成します。<br />画像モード・コードモードでも作れます。</p>
+          </div>
+
+          <div id="results" class="hidden" style="display:flex;flex-direction:column;gap:16px">
+            <!-- raw -->
+            <section class="card">
+              <h3 id="rawTitle">読み取った内容</h3>
+              <div class="rawbox" id="rawBox"></div>
+              <div class="rawmeta">
+                <span><b id="rawType">—</b></span>
+                <span><b id="rawLen">—</b></span>
+                <span><b id="rawVia">—</b></span>
+              </div>
+              <div class="safeline" id="safeLine">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <span id="safeText">安全のため、読み取った内容はリンク化せず、自動で開くこともありません。テキストとしてのみ表示します。</span>
+              </div>
+            </section>
+
+            <!-- hash -->
+            <section class="card">
+              <h3>ハッシュ値（SHA-256）</h3>
+              <div class="hashgrid" id="hashGrid"></div>
+              <p class="verifyline" id="verifyLine"></p>
+            </section>
+
+            <!-- photo features -->
+            <section class="card hidden" id="photoCard">
+              <h3>写真の特徴量</h3>
+              <div class="photo-result-grid">
+                <div class="result-mosaic" id="resultMosaicWrap">
+                  <canvas id="photoResultCanvas" width="177" height="177"></canvas>
+                  <div class="scan-overlay-result" aria-hidden="true">
+                    <div class="scan-grid"></div>
+                    <div class="scan-beam-css"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="colorchips" id="photoResultColors" style="margin-top:0"></div>
+                  <dl class="featlist" id="photoResultFeats"></dl>
+                </div>
+              </div>
+              <p style="color:var(--ink-3);font-size:12.5px;margin:14px 0 0">写真を177×177マスに分け、各マスの色を量子化して読み取った値です。主要な色の割合が楽器の割り当てに、明るさがBPMに、彩度が音の強さに、隣り合うマスの色の差がリズムの複雑さに対応します。</p>
+            </section>
+
+            <!-- japanese summary -->
+            <section class="card" id="summaryCard">
+              <h3>どんな音楽になるか <span class="tag">日本語要約 — 英語プロンプトの意味</span></h3>
+              <p class="summary-lead" id="summaryLead"></p>
+              <p class="summary-body" id="summaryBody"></p>
+              <ul class="summary-points" id="summaryPoints"></ul>
+              <div class="summary-variants" id="summaryVariants"></div>
+              <p class="summary-note">この要約は、下の英語プロンプト3種が「結局どんな曲を狙っているか」を日本語でまとめたものです。Sunoに貼るのは英語のままがおすすめです。</p>
+            </section>
+
+            <!-- prompts -->
+            <div id="promptList" style="display:flex;flex-direction:column;gap:16px"></div>
+
+            <!-- mapping -->
+            <section class="card">
+              <h3>生成の内訳</h3>
+              <p class="pdesc" id="mapDesc" style="color:var(--ink-3);font-size:12.5px;margin:0 0 14px">ハッシュのどのバイトが、どの要素を選んだかを示しています。</p>
+              <table class="map">
+                <thead><tr><th>要素</th><th id="mapBasisHead">根拠（バイト）</th><th>番号</th><th>選ばれた内容</th></tr></thead>
+                <tbody id="mapBody"></tbody>
+              </table>
+            </section>
+
+            <!-- history -->
+            <section class="card" id="histCard">
+              <h3>履歴</h3>
+              <p class="pdesc" style="color:var(--ink-3);font-size:12.5px;margin:0 0 14px">クリックすると、同じ内容でもう一度生成します（結果は毎回同じです）。</p>
+              <div class="hist" id="histList"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ HOW ============ -->
+      <section class="how">
+        <h2>しくみ</h2>
+        <div class="steps">
+          <div class="stepcard">
+            <div class="n">01</div>
+            <h3>写真をマスに分ける</h3>
+            <p>写真モードでは、写真の中央を正方形に切り取り、QRコードの最大サイズと同じ177×177マスに分けて、各マスの色を量子化します。画像モードはQRコードやバーコードの画像の読み取り、コードモードはカメラとテキストの入力です。</p>
+          </div>
+          <div class="stepcard">
+            <div class="n">02</div>
+            <h3>特徴とハッシュで決める</h3>
+            <p>主要な色の割合・色相・明るさ・彩度・色の変化の量を特徴量として取り出します。色相は五度圏のキーに、明るさはBPMに、というように対応が決まっていて、量子化したマスの並びは SHA-256 でハッシュ化します。コードモードでは、読み取った文字列をそのままハッシュ化します。この計算はすべてブラウザの中で行い、写真やコードを外部へ送ることはありません。</p>
+          </div>
+          <div class="stepcard">
+            <div class="n">03</div>
+            <h3>プロンプトを組み立てる</h3>
+            <p>特徴量とハッシュの数値をもとに、ジャンル・楽器・BPM・ムードなどを選んで3種類のプロンプトを作ります。ランダムは使わないので、同じ写真・同じコードでは毎回同じ結果になります。</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>絵mu — えみゅ</span>
+        <span>同じ写真・同じコードからは、同じプロンプトが生成されます</span>
+      </footer>
+    </div>
+
+    <div class="toast" id="toast">コピーしました</div>
+    <canvas id="scanCanvas" class="hidden"></canvas>
+
+    <script>
+    (function(){
+      "use strict";
+
+      /* ================================================================
+         MUSIC POOLS — ハッシュのバイトで選ばれる音楽要素の辞書
+         ================================================================ */
+      /* プールはすべて 2 の累乗サイズ（32 / 16）にそろえ、byte % 件数 が均等になるようにしている。
+         ジャンルはポップ／フォーク・ジャズ・ソウル／エレクトロニック・ヒップホップ／ロックを各8件ずつ。
+         暗い・重いジャンルは metalcore と darkwave の2件だけに抑え、偏らない構成にした。 */
+      var GENRES = [
+        "indie pop","acoustic folk","lo-fi hip-hop","indie rock",
+        "pop rock","jazz fusion","house music","alternative rock",
+        "city pop","bossa nova","UK garage","punk rock",
+        "disco funk","neo-soul R&B","drum and bass","math rock",
+        "synth pop","blues rock","synthwave","post-rock",
+        "dance pop","gospel soul","electronica","art rock",
+        "folk pop","country americana","alternative hip-hop","metalcore",
+        "dream pop","latin jazz","chiptune","darkwave"
+      ];
+      var SUBGENRES = [
+        "with gothic undertones","with industrial edges","with orchestral layers","with folk roots",
+        "with electronic hybrids","with math-rock twists","with psychedelic haze","with punk urgency",
+        "with cinematic scope","with ritual percussion","with jazz-inflected harmony","with retro-futurist sheen",
+        "with pop hooks","with groovy basslines","with sunny harmonies","with intimate storytelling"
+      ];
+      var MOODS = [
+        "joyful","melancholic","sunny","somber",
+        "playful","anxious","uplifting","aggressive",
+        "carefree","lonely","romantic","ominous",
+        "warm","fragile","groovy","defiant",
+        "vibrant","feral","breezy","ritualistic",
+        "hopeful","cybernetic","tender","claustrophobic",
+        "nostalgic","bittersweet","dreamlike","restless",
+        "ethereal","wistful","serene","euphoric"
+      ];
+      var INSTRUMENTS = [
+        "808 sub bass","heavy distorted bass guitar","sparse detuned piano","chiptune arpeggiator",
+        "fretless bass","analog synth pads","taiko drums","string quartet",
+        "music box","glitch percussion","muted trumpet","shamisen",
+        "tape loops","modular synth drones","brushed drums","cello ostinato",
+        "prepared piano","sub sine bass","chorus-drenched guitar","vinyl crackle textures",
+        "kalimba","distorted harmonica","breath-noise textures","bowed vibraphone",
+        "nylon-string guitar","Rhodes electric piano","tenor saxophone","marimba",
+        "upright bass","acoustic guitar strums","funk wah guitar","fingerpicked acoustic guitar"
+      ];
+      var VOCALS = [
+        "raw screaming vocals","fragile falsetto","deep baritone growls","whispered intimate vocals",
+        "vocoder harmonies","chant-like backing vocals","androgynous clean vocals","strained emotive vocals",
+        "layered choral vocals","breathy female vocals","gruff shouted vocals","haunting childlike vocals",
+        "warm soulful vocals","bright clear pop vocals","smoky jazz vocals","playful rap verses"
+      ];
+      var RHYTHMS = [
+        "fast breakbeats","dotted eighth-note rhythm","halftime groove","syncopated kick pattern",
+        "triplet swing","four-on-the-floor pulse","offbeat hi-hats","sparse heartbeat kick",
+        "polyrhythmic toms","shuffle groove","stuttering glitch beats","marching snare pattern",
+        "broken beat","light bossa groove","driving eighth-note pulse","restrained single-hit drums"
+      ];
+      /* 引き算バリエーションの言い回しも固定文にせず、ハッシュで切り替える */
+      var SPARSE_PHRASES = [
+        "sparse arrangement built on negative space and silence",
+        "stripped-back arrangement, one idea at a time",
+        "lean arrangement with open space between the notes",
+        "uncluttered arrangement, only the essential sounds"
+      ];
+      var DRUM_PHRASES = [
+        "restrained drums — few hits, each one heavy",
+        "soft brushed drums, plenty of air around each hit",
+        "a light, unhurried drum pulse with room to breathe",
+        "minimal percussion, accents only where they matter"
+      ];
+      var PAUSE_PHRASES = [
+        "long pauses between phrases, let every note decay fully",
+        "generous rests between phrases",
+        "space between phrases, nothing rushed",
+        "breathing room after every phrase"
+      ];
+      var PRODUCTION = [
+        "lo-fi tape saturation","pristine studio polish","raw room reverb","cavernous reverb",
+        "dry intimate close-miking","analog warmth","bit-crushed textures","wide stereo field",
+        "mono vintage mix","heavy sidechain compression","natural dynamics","distorted clipping edges",
+        "underwater muffled filtering","crystal-clear high end","warm vinyl mastering","stark minimal mix"
+      ];
+      var KEYS = [
+        "C major","G major","D major","A major",
+        "F major","Bb major","Eb major","A minor",
+        "E minor","D minor","B minor","F# minor",
+        "G Dorian","E Dorian","F Lydian","A Mixolydian"
+      ];
+      var STRUCTURES = [
+        "quiet verse exploding into a huge chorus","a slow burn that never fully releases",
+        "abrupt silence before the final chorus","a stripped intro of voice and one instrument",
+        "tension built on a single repeated riff","a bridge that strips down to near-silence",
+        "verses like whispers, choruses like screams","a long outro that decays into noise",
+        "no chorus — one continuous rising arc","call-and-response between voice and bass",
+        "a bright chorus returning like a refrain","a gentle build into a wide open finale",
+        "short verses and a big memorable hook","a danceable loop that evolves gradually",
+        "a singalong chorus that opens up wide","a groove that stays light from start to finish"
+      ];
+
+      /* ================================================================
+         SHA-256 — Web Crypto API 優先、無い環境向けに純JS実装を同梱
+         ================================================================ */
+      function sha256Fallback(ascii){
+        function rr(v,a){return (v>>>a)|(v<<(32-a));}
+        var mathPow=Math.pow, maxWord=mathPow(2,32), result="";
+        var words=[], asciiBitLength=ascii.length*8;
+        var hash=sha256Fallback.h=sha256Fallback.h||[], k=sha256Fallback.k=sha256Fallback.k||[];
+        var primeCounter=k.length, isComposite={};
+        for(var candidate=2; primeCounter<64; candidate++){
+          if(!isComposite[candidate]){
+            for(var i=0;i<313;i+=candidate) isComposite[i]=candidate;
+            hash[primeCounter]=(mathPow(candidate,.5)*maxWord)|0;
+            k[primeCounter++]=(mathPow(candidate,1/3)*maxWord)|0;
+          }
+        }
+        ascii+="\x80";
+        while(ascii.length%64-56) ascii+="\x00";
+        for(var i2=0;i2<ascii.length;i2++){
+          var j=ascii.charCodeAt(i2); if(j>>8) return sha256Fallback(unescape(encodeURIComponent(ascii)));
+          words[i2>>2]|=j<<((3-i2)%4)*8;
+        }
+        words[words.length]=(asciiBitLength/maxWord)|0;
+        words[words.length]=(asciiBitLength);
+        for(var j2=0;j2<words.length;){
+          var w=words.slice(j2,j2+=16), oldHash=hash;
+          hash=hash.slice(0,8);
+          for(var i3=0;i3<64;i3++){
+            var w15=w[i3-15], w2=w[i3-2];
+            var a=hash[0], e=hash[4];
+            var temp1=hash[7]
+              +(rr(e,6)^rr(e,11)^rr(e,25))
+              +((e&hash[5])^((~e)&hash[6]))
+              +k[i3]
+              +(w[i3]= i3<16 ? w[i3] : (
+                  w[i3-16]
+                  +(rr(w15,7)^rr(w15,18)^(w15>>>3))
+                  +w[i3-7]
+                  +(rr(w2,17)^rr(w2,19)^(w2>>>10))
+                )|0);
+            var temp2=(rr(a,2)^rr(a,13)^rr(a,22))+((a&hash[1])^(a&hash[2])^(hash[1]&hash[2]));
+            hash=[(temp1+temp2)|0].concat(hash);
+            hash[4]=(hash[4]+temp1)|0;
+          }
+          for(var i4=0;i4<8;i4++) hash[i4]=(hash[i4]+oldHash[i4])|0;
+        }
+        for(var i5=0;i5<8;i5++){
+          for(var j3=3;j3+1;j3--){
+            var b=(hash[i5]>>(j3*8))&255;
+            result+=((b<16)?0:"")+b.toString(16);
+          }
+        }
+        return result;
+      }
+
+      function sha256Hex(str){
+        if(window.crypto && crypto.subtle && window.TextEncoder){
+          var data=new TextEncoder().encode(str);
+          return crypto.subtle.digest("SHA-256", data).then(function(buf){
+            var bytes=new Uint8Array(buf), hex="";
+            for(var i=0;i<bytes.length;i++) hex+=("0"+bytes[i].toString(16)).slice(-2);
+            return {hex:hex, bytes:bytes};
+          });
+        }
+        var hex=sha256Fallback(str), bytes=new Uint8Array(32);
+        for(var i=0;i<32;i++) bytes[i]=parseInt(hex.substr(i*2,2),16);
+        return Promise.resolve({hex:hex, bytes:bytes});
+      }
+
+      /* ================================================================
+         DETERMINISTIC MAPPING — バイト → 音楽要素（乱数なし）
+         ================================================================ */
+      function pick(bytes, offset, pool){
+        var b=bytes[offset % bytes.length];
+        return { value: pool[b % pool.length], byte: b, index: b % pool.length, offset: offset };
+      }
+      function pickDistinct(bytes, offset, pool, count){
+        var out=[], used={}, i=0;
+        while(out.length<count && i<pool.length*2){
+          var p=pick(bytes, offset+i, pool);
+          if(!used[p.index]){ used[p.index]=1; out.push(p); }
+          i++;
+        }
+        return out;
+      }
+
+      /* avoidIndex と同じ値になったら次のバイトへ進む（決定的に重複回避） */
+      function pickAvoid(bytes, offset, pool, avoidIndex){
+        var p=pick(bytes, offset, pool), i=0;
+        while(p.index===avoidIndex && i<pool.length){ i++; p=pick(bytes, offset+i, pool); }
+        return p;
+      }
+
+      function buildGenome(bytes){
+        var g={};
+        g.genre     = pick(bytes, 0, GENRES);
+        g.subgenre  = pick(bytes, 1, SUBGENRES);
+        g.mood      = pick(bytes, 2, MOODS);
+        g.vocal     = pick(bytes, 3, VOCALS);
+        g.mood2     = pickAvoid(bytes, 15, MOODS, g.mood.index);
+        g.rhythm    = pick(bytes, 4, RHYTHMS);
+        g.production= pick(bytes, 5, PRODUCTION);
+        g.key       = pick(bytes, 6, KEYS);
+        g.structure = pick(bytes, 7, STRUCTURES);
+        g.instruments = pickDistinct(bytes, 8, INSTRUMENTS, 3);
+        g.genreAlt  = pickAvoid(bytes, 16, GENRES, g.genre.index);
+        g.rhythmAlt = pickAvoid(bytes, 17, RHYTHMS, g.rhythm.index);
+        g.vocalAlt  = pickAvoid(bytes, 18, VOCALS, g.vocal.index);
+        g.prodAlt   = pickAvoid(bytes, 19, PRODUCTION, g.production.index);
+        g.bpm       = 60 + (bytes[20] % 101);            /* 60–160 */
+        g.bpmSlow   = 60 + (bytes[21] % 41);             /* 60–100 */
+        g.energy    = 1 + (bytes[22] % 10);              /* 1–10 */
+        g.variantA  = bytes[23] % 4;                     /* プロンプトの並び・言い回しの切り替え */
+        g.variantB  = bytes[24] % 4;
+        g.variantC  = bytes[25] % 4;
+        g.sparsePhrase = SPARSE_PHRASES[g.variantB];
+        g.drumPhrase   = DRUM_PHRASES[(bytes[24] >> 2) % 4];
+        g.pausePhrase  = PAUSE_PHRASES[bytes[26] % 4];
+        return g;
+      }
+
+      function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+      function buildPrompts(g){
+        var inst = g.instruments.map(function(p){return p.value;});
+        /* A: 要素の並び順をハッシュで切り替える（毎回同じ語順・同じ型にならないように） */
+        var aVariants = [
+          [cap(g.genre.value)+" "+g.subgenre.value, g.mood.value+" atmosphere", inst[0]+", "+inst[1], g.vocal.value, g.rhythm.value+", "+g.bpm+" BPM", "key of "+g.key.value, g.production.value, g.structure.value],
+          [cap(g.mood.value)+" "+g.genre.value+" "+g.subgenre.value, "key of "+g.key.value, g.vocal.value+" over "+inst[0]+" and "+inst[1], g.rhythm.value+" at "+g.bpm+" BPM", g.production.value, g.structure.value],
+          [cap(g.vocal.value)+" front and center", g.genre.value+" "+g.subgenre.value, inst[1]+" with "+inst[0]+" underneath", g.mood.value+" mood, "+g.rhythm.value, g.bpm+" BPM in "+g.key.value, g.structure.value, g.production.value],
+          [g.bpm+" BPM "+g.genre.value+" "+g.subgenre.value, g.rhythm.value+", "+g.mood.value+" atmosphere", inst[0]+", "+inst[1]+", "+g.vocal.value, "key of "+g.key.value, g.production.value, g.structure.value]
+        ];
+        var p1 = aVariants[g.variantA || 0].join(", ");
+
+        var p2 = [
+          "Minimal "+g.genreAlt.value,
+          g.mood2.value+" and restrained",
+          g.sparsePhrase || SPARSE_PHRASES[0],
+          inst[2]+" and "+g.vocalAlt.value+" only, nothing more",
+          g.drumPhrase || DRUM_PHRASES[0],
+          g.rhythmAlt.value+", "+g.bpmSlow+" BPM",
+          "key of "+g.key.value,
+          g.pausePhrase || PAUSE_PHRASES[0],
+          g.prodAlt.value
+        ].join(", ");
+
+        var cVariants = [
+          [cap(g.genre.value)+" × "+g.genreAlt.value, g.mood.value+" yet "+g.mood2.value, inst[1]+", "+inst[2]+", "+inst[0], g.vocal.value+" trading lines with "+g.vocalAlt.value, g.rhythm.value+" at "+g.bpm+" BPM, intensity "+g.energy+"/10", "key of "+g.key.value, g.structure.value, g.production.value],
+          [cap(g.genreAlt.value)+" meets "+g.genre.value, g.mood2.value+" with flashes of "+g.mood.value, g.vocalAlt.value+" answering "+g.vocal.value, inst[2]+" and "+inst[0]+" intertwined", g.rhythm.value+", "+g.bpm+" BPM, intensity "+g.energy+"/10", "key of "+g.key.value, g.production.value, g.structure.value],
+          ["A crossover of "+g.genre.value+" and "+g.genreAlt.value, inst[0]+", "+inst[1]+", "+inst[2], g.mood.value+" and "+g.mood2.value+" in turns", g.vocal.value+" with "+g.vocalAlt.value, g.rhythm.value+" at "+g.bpm+" BPM", "key of "+g.key.value, g.structure.value, g.production.value],
+          [cap(g.genre.value)+" fused with "+g.genreAlt.value, g.bpm+" BPM, "+g.rhythm.value+", intensity "+g.energy+"/10", inst[1]+" meeting "+inst[2], g.vocal.value+" trading lines with "+g.vocalAlt.value, g.mood.value+" yet "+g.mood2.value, "key of "+g.key.value, g.structure.value, g.production.value]
+        ];
+        var p3 = cVariants[g.variantC || 0].join(", ");
+
+        return [
+          { kind:"A", name:"スタンダード", desc:"ジャンル・楽器・BPMなどをバランスよく組み合わせた基本形です。", text:p1 },
+          { kind:"B", name:"引き算", desc:"音数を絞り、余白と静けさを残したミニマルな構成です。", text:p2 },
+          { kind:"C", name:"クロスオーバー", desc:"2つのジャンルやボーカルを掛け合わせた構成です。", text:p3 }
+        ];
+      }
+
+      /* ================================================================
+         JAPANESE SUMMARY — 英語プロンプトを日本語で要約する
+         ================================================================ */
+      var GENRE_JA = {"dark alternative rock":"ダークなオルタナティブ・ロック","art rock":"アート・ロック","post-hardcore":"ポスト・ハードコア","metalcore":"メタルコア","deathcore":"デスコア","lo-fi hip-hop":"ローファイ・ヒップホップ","UK garage":"UKガラージ","synthwave":"シンセウェイヴ","cyberpunk industrial":"サイバーパンク寄りのインダストリアル","Showa kayo":"昭和歌謡","city pop":"シティポップ","shoegaze":"シューゲイザー","post-rock":"ポストロック","doom metal":"ドゥームメタル","math rock":"マスロック","darkwave":"ダークウェイヴ","trip-hop":"トリップホップ","drum and bass":"ドラムンベース","chiptune":"チップチューン","ambient drone":"アンビエント・ドローン","visual kei rock":"ヴィジュアル系ロック","nu metal":"ニューメタル","jazz fusion":"ジャズ・フュージョン","folk noir":"暗めのフォーク（フォーク・ノワール）","breakcore":"ブレイクコア"};
+      var SUBGENRE_JA = {"with gothic undertones":"ゴシックな陰影","with industrial edges":"インダストリアルな硬質さ","with orchestral layers":"オーケストラの厚み","with folk roots":"フォークのルーツ感","with electronic hybrids":"エレクトロニックとの混成感","with math-rock twists":"マスロック的なひねり","with psychedelic haze":"サイケデリックな靄（もや）","with punk urgency":"パンクの切迫感","with cinematic scope":"映画のような広がり","with ritual percussion":"儀式的な打楽器","with jazz-inflected harmony":"ジャズ寄りの和声感","with retro-futurist sheen":"レトロフューチャーな光沢"};
+      var MOOD_JA = {"melancholic":"メランコリックで物悲しい","aggressive":"攻撃的で激しい","nostalgic":"懐かしくノスタルジックな","cybernetic":"機械的で近未来的な","ethereal":"浮遊感のある幻想的な","claustrophobic":"閉塞感のある息苦しい","euphoric":"高揚感のある","somber":"重く沈んだ","anxious":"不安で緊張感のある","dreamlike":"夢の中のような","defiant":"反骨的で挑むような","ritualistic":"儀式めいた","lonely":"孤独でひっそりとした","feral":"野生味のある荒々しい","fragile":"壊れそうに繊細な","ominous":"不穏な予感のする"};
+      var INSTRUMENT_JA = {"808 sub bass":"808の重低音ベース","heavy distorted bass guitar":"激しく歪んだベースギター","sparse detuned piano":"音数を絞った、少しずれた調律のピアノ","chiptune arpeggiator":"チップチューン風のアルペジエーター","fretless bass":"フレットレスベース","analog synth pads":"アナログシンセのパッド","taiko drums":"和太鼓","string quartet":"弦楽四重奏","music box":"オルゴール","glitch percussion":"グリッチ感のあるパーカッション","muted trumpet":"ミュートしたトランペット","shamisen":"三味線","tape loops":"テープループ","modular synth drones":"モジュラーシンセの持続音","brushed drums":"ブラシで叩くドラム","cello ostinato":"チェロの繰り返しフレーズ","prepared piano":"プリペアド・ピアノ（内部を加工したピアノ）","sub sine bass":"サイン波の超低音ベース","chorus-drenched guitar":"コーラスを深くかけたギター","vinyl crackle textures":"レコードのパチパチというノイズ","kalimba":"カリンバ","distorted harmonica":"歪ませたハーモニカ","breath-noise textures":"息づかいのノイズ","bowed vibraphone":"弓で弾くヴィブラフォン"};
+      var VOCAL_JA = {"raw screaming vocals":"剥き出しのスクリーム（叫び）中心のボーカル","fragile falsetto":"壊れそうなファルセット（裏声）","deep baritone growls":"低音バリトンのグロウル（うなり声）","whispered intimate vocals":"囁くような親密なボーカル","vocoder harmonies":"ボコーダーのハーモニー","chant-like backing vocals":"詠唱のようなコーラス","androgynous clean vocals":"中性的なクリーンボーカル","strained emotive vocals":"感情が張り詰めたボーカル","layered choral vocals":"何重にも重ねた合唱風ボーカル","breathy female vocals":"息多めの女性ボーカル","gruff shouted vocals":"荒く叫ぶボーカル","haunting childlike vocals":"印象に残る、子供のような声のボーカル"};
+      var RHYTHM_JA = {"fast breakbeats":"速いブレイクビーツ","dotted eighth-note rhythm":"付点8分の跳ねたリズム","halftime groove":"半分の速さに感じるハーフタイムのグルーヴ","syncopated kick pattern":"シンコペーションしたキック","triplet swing":"3連符のスウィング","four-on-the-floor pulse":"四つ打ちのキック","offbeat hi-hats":"裏拍のハイハット","sparse heartbeat kick":"心臓の鼓動のようにまばらなキック","polyrhythmic toms":"ポリリズムのタム回し","shuffle groove":"シャッフルのグルーヴ","stuttering glitch beats":"小刻みに途切れるグリッチビート","marching snare pattern":"行進曲のようなスネア","broken beat":"崩したビート（ブロークンビート）","slow doom pulse":"重く遅いドゥームのパルス","driving eighth-note pulse":"8分音符で突き進むビート","restrained single-hit drums":"一打を重く置く、抑えたドラム"};
+      var PRODUCTION_JA = {"lo-fi tape saturation":"テープで少し歪ませたローファイな質感","pristine studio polish":"クリアで磨き上げたスタジオサウンド","raw room reverb":"部屋の響きを残した生々しいリバーブ","cavernous reverb":"洞窟のような深いリバーブ","dry intimate close-miking":"ドライで近くに感じる親密な録音","analog warmth":"アナログの温かみ","bit-crushed textures":"ビットクラッシュした粗い質感","wide stereo field":"左右に広がるステレオ感","mono vintage mix":"モノラルでヴィンテージなミックス","heavy sidechain compression":"強めのサイドチェイン","natural dynamics":"抑揚を残した自然なダイナミクス","distorted clipping edges":"際が歪むような荒さ","underwater muffled filtering":"水中で聴くようなこもった音","crystal-clear high end":"高音が澄んだ音作り","warm vinyl mastering":"温かいレコードのような仕上がり","stark minimal mix":"無駄を削いだミニマルなミックス"};
+      var STRUCTURE_JA = {"quiet verse exploding into a huge chorus":"静かなバースから大きなサビへ爆発する展開","a slow burn that never fully releases":"じわじわ熱を持ち、最後まで完全には解放しない展開","abrupt silence before the final chorus":"最後のサビの前に急な静寂が落ちる展開","a stripped intro of voice and one instrument":"声と楽器ひとつだけの、むき出しのイントロ","tension built on a single repeated riff":"ひとつのリフの繰り返しで緊張を作る展開","a bridge that strips down to near-silence":"ブリッジで静寂近くまで落とす展開","verses like whispers, choruses like screams":"バースは囁き、サビは叫ぶという対比のある展開","a long outro that decays into noise":"ノイズへ溶けていく長いアウトロ","no chorus — one continuous rising arc":"サビなしで一本の山を登り続ける展開","call-and-response between voice and bass":"声とベースの掛け合い"};
+      /* 新プール（均等・中立版）の日本語対応を上書きで追加する */
+      Object.assign(GENRE_JA, {"indie pop":"インディー・ポップ","acoustic folk":"アコースティック・フォーク","indie rock":"インディー・ロック","pop rock":"ポップ・ロック","house music":"ハウス・ミュージック","alternative rock":"オルタナティブ・ロック","bossa nova":"ボサノヴァ","punk rock":"パンク・ロック","disco funk":"ディスコ・ファンク","neo-soul R&B":"ネオソウル／R&B","synth pop":"シンセ・ポップ","blues rock":"ブルース・ロック","dance pop":"ダンス・ポップ","gospel soul":"ゴスペル／ソウル","electronica":"エレクトロニカ","folk pop":"フォーク・ポップ","country americana":"カントリー／アメリカーナ","alternative hip-hop":"オルタナティブ・ヒップホップ","dream pop":"ドリーム・ポップ","latin jazz":"ラテン・ジャズ"});
+      Object.assign(MOOD_JA, {"joyful":"喜びに満ちた明るい","sunny":"日差しのように明るい","playful":"遊び心のある","uplifting":"気持ちが上向くような","carefree":"のびのびと自由な","romantic":"ロマンチックな","warm":"温かみのある","groovy":"ノリの良いグルーヴィーな","vibrant":"鮮やかで生き生きとした","breezy":"風通しの良い爽やかな","hopeful":"希望を感じる","tender":"優しく柔らかな","bittersweet":"甘くほろ苦い","wistful":"少し切なく懐かしい","restless":"落ち着かず動き続けるような","serene":"静かで穏やかな"});
+      Object.assign(INSTRUMENT_JA, {"nylon-string guitar":"ナイロン弦ギター","Rhodes electric piano":"ローズ（フェンダー・ローズ）のエレクトリックピアノ","tenor saxophone":"テナーサックス","marimba":"マリンバ","upright bass":"ウッドベース（コントラバス）","acoustic guitar strums":"アコースティックギターのストローク","funk wah guitar":"ワウを効かせたファンクギター","fingerpicked acoustic guitar":"フィンガーピッキングのアコースティックギター","chorus-drenched guitar":"コーラスを深くかけたギター"});
+      Object.assign(VOCAL_JA, {"warm soulful vocals":"温かくソウルフルなボーカル","bright clear pop vocals":"明るく澄んだポップボーカル","smoky jazz vocals":"スモーキーなジャズボーカル","playful rap verses":"遊び心のあるラップのバース"});
+      Object.assign(RHYTHM_JA, {"light bossa groove":"軽いボサノヴァのグルーヴ"});
+      Object.assign(SUBGENRE_JA, {"with pop hooks":"キャッチーなポップフック","with groovy basslines":"グルーヴィーなベースライン","with sunny harmonies":"明るいハーモニー","with intimate storytelling":"親密なストーリーテリング"});
+      Object.assign(STRUCTURE_JA, {"a bright chorus returning like a refrain":"明るいサビがリフレインのように戻ってくる展開","a gentle build into a wide open finale":"穏やかに盛り上がって開けたフィナーレへ向かう展開","short verses and a big memorable hook":"短いバースと大きく印象的なフック","a danceable loop that evolves gradually":"踊れるループが少しずつ変化していく展開","a singalong chorus that opens up wide":"一緒に歌える、大きく開くサビ","a groove that stays light from start to finish":"最初から最後まで軽快なグルーヴが続く展開"});
+      function ja(map, val, fallback){ return map[val] || fallback || val; }
+      function tempoLabel(bpm){ if(bpm<80) return "ゆったりした速さ"; if(bpm<100) return "落ち着いた中速"; if(bpm<120) return "中速"; if(bpm<140) return "速め"; return "かなり速い"; }
+      function energyLabel(e){ if(e<=3) return "静かで抑えた強さ"; if(e<=6) return "中くらいの強さ"; if(e<=8) return "強めのエネルギー"; return "非常に強いエネルギー"; }
+      function keyLabelJa(key){ var m={"Mixolydian":"ミックスリディアン（明るく少しブルージーなモード）","minor":"短調（マイナー）","major":"長調（メジャー）","Dorian":"ドリアン（短調寄りのモード）","Phrygian":"フリジアン（暗く緊張感のあるモード）","harmonic minor":"ハーモニック・マイナー","Lydian":"リディアン（浮遊感のあるモード）"}; for(var k in m){ if(key.indexOf(k)!==-1) return key+"（"+m[k]+"）"; } return key; }
+      function buildJapaneseSummary(g){
+        var genreJa=ja(GENRE_JA,g.genre.value), genreAltJa=ja(GENRE_JA,g.genreAlt.value);
+        var moodJa=ja(MOOD_JA,g.mood.value), mood2Ja=ja(MOOD_JA,g.mood2.value);
+        var subJa=ja(SUBGENRE_JA,g.subgenre.value);
+        var inst=g.instruments.map(function(p){return ja(INSTRUMENT_JA,p.value);});
+        var vocalJa=ja(VOCAL_JA,g.vocal.value), vocalAltJa=ja(VOCAL_JA,g.vocalAlt.value);
+        var rhythmJa=ja(RHYTHM_JA,g.rhythm.value), rhythmAltJa=ja(RHYTHM_JA,g.rhythmAlt.value);
+        var prodJa=ja(PRODUCTION_JA,g.production.value);
+        var structJa=ja(STRUCTURE_JA,g.structure.value);
+        var lead=moodJa+"雰囲気の、"+genreJa+"。";
+        var body="中心になるのは"+inst[0]+"と"+inst[1]+"で、主役は"+vocalJa+"です。"+subJa+"も重なり、速さは BPM "+g.bpm+"（"+tempoLabel(g.bpm)+"）で、"+rhythmJa+"がリズムの核になります。キーは "+keyLabelJa(g.key.value)+"、音作りは"+prodJa+"。曲は"+structJa+"を見せます。";
+        var points=[
+          ["ジャンル / 雰囲気", genreJa+" ／ "+moodJa],
+          ["速さ / リズム", "BPM "+g.bpm+"（"+tempoLabel(g.bpm)+"）／ "+rhythmJa],
+          ["主な楽器", inst.join("、")],
+          ["歌声 / 曲の流れ", vocalJa+" ／ "+structJa]
+        ];
+        var variants=[
+          {label:"A スタンダード", text:"上の要約そのもの。ジャンル、楽器、BPMをバランスよく使った基本形です。"},
+          {label:"B 引き算", text:"BPM "+g.bpmSlow+"で、"+inst[2]+"と"+vocalAltJa+"だけで組み立てる、音数を絞った版。"+mood2Ja+"空気で、余白と間を残し、一打・一音を大事に置きます。リズムは"+rhythmAltJa+"です。"},
+          {label:"C クロスオーバー", text:genreJa+"と"+genreAltJa+"を掛け合わせる版。"+vocalJa+"と"+vocalAltJa+"が掛け合い、強さは "+g.energy+"/10（"+energyLabel(g.energy)+"）で、"+moodJa+"中にも"+mood2Ja+"一面が出ます。"}
+        ];
+        return {lead:lead, body:body, points:points, variants:variants};
+      }
+
+      /* ================================================================
+         PHOTO MODE — 色の特徴量 → 音楽要素の対応表
+         色相は12分割し、五度圏のキーと対応させる
+         ================================================================ */
+      var HUE_NAMES = ["赤","赤橙","橙","黄橙","黄","黄緑","緑","青緑","青","青紫","紫","赤紫"];
+      /* 色相はジャンルを1つに固定せず「系統」を決め、その系統の中からハッシュで選ぶ。
+         同じ青空・同じ緑でも毎回まったく同じジャンルにならないようにし、
+         明るい色相にはポップ／ファンク／フォーク／ジャズ等の明るい系統を割り当てた。 */
+      var HUE_GENRE_FAMILIES = [
+        ["pop rock","neo-soul R&B","punk rock","disco funk"],
+        ["disco funk","gospel soul","pop rock","blues rock"],
+        ["folk pop","country americana","disco funk","indie pop"],
+        ["country americana","folk pop","city pop","acoustic folk"],
+        ["city pop","dance pop","disco funk","synth pop"],
+        ["indie pop","folk pop","dream pop","bossa nova"],
+        ["acoustic folk","indie pop","bossa nova","folk pop"],
+        ["bossa nova","latin jazz","jazz fusion","electronica"],
+        ["synth pop","electronica","dream pop","house music"],
+        ["alternative hip-hop","electronica","synthwave","house music"],
+        ["house music","synthwave","dance pop","darkwave"],
+        ["dance pop","neo-soul R&B","city pop","latin jazz"]
+      ];
+      var HUE_MOOD_FAMILIES = [
+        ["vibrant","romantic","defiant","joyful"],
+        ["warm","groovy","playful","nostalgic"],
+        ["warm","hopeful","playful","bittersweet"],
+        ["sunny","carefree","warm","hopeful"],
+        ["joyful","sunny","euphoric","carefree"],
+        ["breezy","hopeful","playful","serene"],
+        ["serene","tender","breezy","wistful"],
+        ["dreamlike","serene","ethereal","restless"],
+        ["dreamlike","cybernetic","serene","restless"],
+        ["cybernetic","restless","dreamlike","vibrant"],
+        ["vibrant","euphoric","romantic","restless"],
+        ["romantic","vibrant","nostalgic","euphoric"]
+      ];
+      var FIFTH_KEYS_MINOR = ["C minor","G minor","D minor","A minor","E minor","B minor","F# minor","Db minor","Ab minor","Eb minor","Bb minor","F minor"];
+      var FIFTH_KEYS_MAJOR = ["C major","G major","D major","A major","E major","B major","F# major","Db major","Ab major","Eb major","Bb major","F major"];
+      var INSTRUMENT_FAMILIES_BY_HUE = [
+        ["heavy distorted bass guitar","tenor saxophone","funk wah guitar"],
+        ["muted trumpet","marimba","funk wah guitar"],
+        ["shamisen","kalimba","acoustic guitar strums"],
+        ["kalimba","music box","nylon-string guitar"],
+        ["music box","Rhodes electric piano","chorus-drenched guitar"],
+        ["chorus-drenched guitar","fingerpicked acoustic guitar","cello ostinato"],
+        ["cello ostinato","upright bass","nylon-string guitar"],
+        ["bowed vibraphone","marimba","analog synth pads"],
+        ["analog synth pads","Rhodes electric piano","tenor saxophone"],
+        ["modular synth drones","chiptune arpeggiator","analog synth pads"],
+        ["sparse detuned piano","analog synth pads","bowed vibraphone"],
+        ["prepared piano","music box","muted trumpet"]
+      ];
+      var ACHROMATIC_INSTRUMENTS = ["sub sine bass","tape loops","vinyl crackle textures","breath-noise textures","acoustic guitar strums","Rhodes electric piano","upright bass","sparse detuned piano"];
+      var RHYTHM_BY_EDGE = [
+        ["sparse heartbeat kick","restrained single-hit drums","light bossa groove","halftime groove"],
+        ["dotted eighth-note rhythm","syncopated kick pattern","shuffle groove","driving eighth-note pulse"],
+        ["fast breakbeats","polyrhythmic toms","stuttering glitch beats","broken beat"]
+      ];
+      var PROD_BY_SAT = [
+        ["dry intimate close-miking","natural dynamics","stark minimal mix","mono vintage mix"],
+        ["analog warmth","raw room reverb","lo-fi tape saturation","wide stereo field"],
+        ["bit-crushed textures","distorted clipping edges","heavy sidechain compression","cavernous reverb"]
+      ];
+
+      function buildPhotoGenome(bytes, f){
+        var g = buildGenome(bytes);
+        var bin = f.dominantHueBin;
+        if(bin >= 0){
+          var hueBasis = "主要な色相 " + f.dominantHueDeg + "°（" + HUE_NAMES[bin] + "）";
+          var gf = HUE_GENRE_FAMILIES[bin]; var gv = gf[bytes[0] % gf.length];
+          g.genre = { value:gv, byte:bytes[0], index:GENRES.indexOf(gv), offset:0, basis:hueBasis + " の系統からハッシュで選択" };
+          var mf = HUE_MOOD_FAMILIES[bin]; var mv = mf[bytes[2] % mf.length];
+          g.mood  = { value:mv,  byte:bytes[2], index:MOODS.indexOf(mv), offset:2, basis:hueBasis + " の系統からハッシュで選択" };
+          var keyName = (f.meanLum >= 0.5) ? FIFTH_KEYS_MAJOR[bin] : FIFTH_KEYS_MINOR[bin];
+          g.key = { value:keyName, byte:bytes[6], index:bin, offset:6, basis:hueBasis + " → 五度圏で " + keyName + (f.meanLum >= 0.5 ? "（明るいため長調）" : "（暗めのため短調）") };
+        } else {
+          var achro = ["indie pop","acoustic folk","jazz fusion","electronica","post-rock","neo-soul R&B","city pop","dream pop"];
+          var ai = bytes[0] % achro.length;
+          g.genre = { value:achro[ai], byte:bytes[0], index:GENRES.indexOf(achro[ai]), offset:0, basis:"無彩色が多いため、中立な系統からハッシュで選択" };
+          var amv = MOODS[bytes[2] % MOODS.length];
+          g.mood  = { value:amv, byte:bytes[2], index:MOODS.indexOf(amv), offset:2, basis:"無彩色のため、ムード全体からハッシュで選択" };
+          var aKey = (f.meanLum >= 0.5) ? FIFTH_KEYS_MAJOR[bytes[6] % 12] : FIFTH_KEYS_MINOR[bytes[6] % 12];
+          g.key   = { value:aKey, byte:bytes[6], index:bytes[6] % 12, offset:6, basis:"無彩色のため、明るさとハッシュで " + aKey };
+        }
+        g.bpm     = 60 + Math.round(f.meanLum * 100);
+        g.bpmSlow = 60 + Math.round(f.meanLum * 40);
+        g.energy  = 1 + Math.round(f.meanSat * 9);
+        var tier = f.edgeDensity < 0.08 ? 0 : (f.edgeDensity < 0.20 ? 1 : 2);
+        var rpool = RHYTHM_BY_EDGE[tier], rp = rpool[bytes[4] % rpool.length];
+        g.rhythm = { value:rp, byte:bytes[4], index:RHYTHMS.indexOf(rp), offset:4,
+          basis:"色の変化の量 " + f.edgeDensity.toFixed(3) + " → " + ["少ない（単純なリズム）","中くらい","多い（複雑なリズム）"][tier] };
+        var stier = f.meanSat < 0.25 ? 0 : (f.meanSat < 0.55 ? 1 : 2);
+        var ppool = PROD_BY_SAT[stier], pp = ppool[bytes[5] % ppool.length];
+        g.production = { value:pp, byte:bytes[5], index:PRODUCTION.indexOf(pp), offset:5,
+          basis:"彩度 " + Math.round(f.meanSat * 100) + "% → " + ["抑えた質感","中くらいの質感","強い質感"][stier] };
+        var used = {}, insts = [];
+        f.topColors.forEach(function(c, ci){
+          var val;
+          if(c.sat < 0.12){ val = ACHROMATIC_INSTRUMENTS[(bytes[8 + ci] + ci) % ACHROMATIC_INSTRUMENTS.length]; }
+          else { var fam = INSTRUMENT_FAMILIES_BY_HUE[c.hueBin]; val = fam[(bytes[8 + ci] + ci) % fam.length]; }
+          var guard = 0;
+          while(used[val] && guard < INSTRUMENTS.length){
+            val = INSTRUMENTS[(INSTRUMENTS.indexOf(val) + 1 + guard) % INSTRUMENTS.length]; guard++;
+          }
+          used[val] = 1;
+          insts.push({ value:val, byte:bytes[8 + ci], index:INSTRUMENTS.indexOf(val), offset:8 + ci,
+            basis:"割合 " + (c.ratio * 100).toFixed(1) + "% の色 " + c.hex });
+        });
+        var ei = 0;
+        while(insts.length < 3 && ei < 24){
+          var extra = pick(bytes, 24 + ei, INSTRUMENTS); ei++;
+          if(!used[extra.value]){ used[extra.value] = 1; insts.push(extra); }
+        }
+        g.instruments = insts;
+        if(g.genreAlt.value === g.genre.value){
+          g.genreAlt = pickAvoid(bytes, 23, GENRES, GENRES.indexOf(g.genre.value));
+        }
+        return g;
+      }
+
+      /* ================================================================
+         SANITIZE / CLASSIFY — 表示は textContent のみ、リンク化禁止
+         ================================================================ */
+      function classify(str){
+        var t=str.trim();
+        if(/^https?:\/\//i.test(t) || /^www\./i.test(t)) return {type:"URL文字列", url:true};
+        if(/^WIFI:/i.test(t)) return {type:"Wi-Fi設定コード", url:false};
+        if(/^mailto:/i.test(t) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return {type:"メールアドレス系", url:false};
+        if(/^\d{8,14}$/.test(t)) return {type:"数値バーコード (JAN/EAN等)", url:false};
+        if(/^tel:/i.test(t)) return {type:"電話番号系", url:false};
+        return {type:"プレーンテキスト", url:false};
+      }
+
+      /* ================================================================
+         UI REFS
+         ================================================================ */
+      var $=function(id){return document.getElementById(id);};
+      var video=$("video"), cambox=$("cambox"), camEmpty=$("camEmpty"), camStatus=$("camStatus");
+      var upStatus=$("upStatus"), textInput=$("textInput");
+      var resultsEl=$("results"), emptyEl=$("emptyState"), processingEl=$("processing");
+      var scanCanvas=$("scanCanvas"), sctx=scanCanvas.getContext("2d",{willReadFrequently:true});
+      var stream=null, rafId=null, scanning=false, lastScanned="", lastVia="";
+      var history=[];
+
+      function toast(msg){
+        var t=$("toast"); t.textContent=msg; t.classList.add("show");
+        setTimeout(function(){ t.classList.remove("show"); },1800);
+      }
+
+      /* ---------- tabs ---------- */
+      var tabs=document.querySelectorAll(".tab");
+      tabs.forEach(function(tab){
+        tab.addEventListener("click", function(){
+          tabs.forEach(function(x){x.classList.remove("active");});
+          tab.classList.add("active");
+          document.querySelectorAll(".tabpane").forEach(function(p){p.classList.remove("active");});
+          $("pane-"+tab.getAttribute("data-tab")).classList.add("active");
+          /* 写真タブに戻ったら、読み込み済みの写真のスキャンを自動で再生する */
+          if(tab.getAttribute("data-tab")==="photo" && typeof photoState!=="undefined" && photoState && typeof animateMosaicScan==="function"){
+            setTimeout(function(){ animateMosaicScan(null); }, 60);
+          }
+        });
+      });
+
+      /* ---------- camera ---------- */
+      function setCamStatus(msg, cls){ camStatus.textContent=msg; camStatus.className="camstatus"+(cls?" "+cls:""); }
+
+      function stopCamera(){
+        scanning=false;
+        if(rafId) cancelAnimationFrame(rafId); rafId=null;
+        if(stream){ stream.getTracks().forEach(function(t){t.stop();}); stream=null; }
+        video.srcObject=null;
+        cambox.classList.remove("live"); camEmpty.style.display="flex";
+        $("btnCamStart").disabled=false; $("btnCamStop").disabled=true;
+      }
+
+      function onCodeFound(text, via){
+        stopCamera();
+        lastScanned=text; lastVia=via;
+        textInput.value=text;
+        generate(text, via);
+      }
+
+      function tick(){
+        if(!scanning) return;
+        if(video.readyState===video.HAVE_ENOUGH_DATA){
+          scanCanvas.width=video.videoWidth; scanCanvas.height=video.videoHeight;
+          sctx.drawImage(video,0,0,scanCanvas.width,scanCanvas.height);
+          var found=null;
+          if(window.BarcodeDetector){
+            /* BarcodeDetector は非同期なので、検出は別ループで行う */
+          }
+          if(window.jsQR){
+            try{
+              var img=sctx.getImageData(0,0,scanCanvas.width,scanCanvas.height);
+              var code=jsQR(img.data, img.width, img.height, {inversionAttempts:"attemptBoth"});
+              if(code && code.data) found=code.data;
+            }catch(e){/* keep scanning */}
+          }
+          if(found){ onCodeFound(found,"カメラ"); return; }
+        }
+        rafId=requestAnimationFrame(tick);
+      }
+
+      var bdTimer=null;
+      function barcodeLoop(){
+        if(!scanning || !window.BarcodeDetector) return;
+        var bd;
+        try{ bd=new BarcodeDetector({formats:["qr_code","ean_13","ean_8","code_128","code_39","upc_a","upc_e"]}); }
+        catch(e){ return; }
+        bdTimer=setInterval(function(){
+          if(!scanning){ clearInterval(bdTimer); return; }
+          bd.detect(video).then(function(codes){
+            if(codes && codes.length && codes[0].rawValue){
+              clearInterval(bdTimer);
+              onCodeFound(codes[0].rawValue, "カメラ (バーコード)");
+            }
+          }).catch(function(){});
+        }, 350);
+      }
+
+      $("btnCamStart").addEventListener("click", function(){
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+          setCamStatus("この端末ではカメラが使えません。画像アップロードかテキスト入力を使ってください。","err");
+          return;
+        }
+        setCamStatus("カメラを起動しています…");
+        navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false})
+          .then(function(s){
+            stream=s; video.srcObject=s;
+            return video.play();
+          })
+          .then(function(){
+            scanning=true;
+            cambox.classList.add("live"); camEmpty.style.display="none";
+            $("btnCamStart").disabled=true; $("btnCamStop").disabled=false;
+            setCamStatus("読み取り中です — コードを枠の中に入れてください","ok");
+            tick(); barcodeLoop();
+          })
+          .catch(function(){
+            setCamStatus("カメラの許可が得られませんでした。画像アップロードかテキスト入力を使ってください。","err");
+          });
+      });
+      $("btnCamStop").addEventListener("click", function(){
+        stopCamera(); if(bdTimer) clearInterval(bdTimer);
+        setCamStatus("カメラを停止しました");
+      });
+
+      /* ---------- upload ---------- */
+      var drop=$("drop"), fileInput=$("fileInput");
+      function handleFile(file){
+        if(!file){ return; }
+        if(!/^image\//.test(file.type)){ upStatus.textContent="画像ファイルを選んでください。"; upStatus.className="camstatus err"; return; }
+        var url=URL.createObjectURL(file);
+        var img=new Image();
+        img.onload=function(){
+          scanCanvas.width=img.naturalWidth; scanCanvas.height=img.naturalHeight;
+          sctx.drawImage(img,0,0);
+          URL.revokeObjectURL(url);
+          var done=function(text){ lastScanned=text; lastVia="画像アップロード"; textInput.value=text; generate(text,"画像アップロード"); };
+          var tryBD=function(){
+            if(window.BarcodeDetector){
+              var bd=new BarcodeDetector({formats:["qr_code","ean_13","ean_8","code_128","code_39","upc_a","upc_e"]});
+              bd.detect(scanCanvas).then(function(codes){
+                if(codes && codes.length && codes[0].rawValue){ done(codes[0].rawValue); }
+                else { upStatus.textContent="コードが見つかりませんでした。コードが大きくはっきり写った画像で試してください。"; upStatus.className="camstatus err"; }
+              }).catch(function(){
+                upStatus.textContent="コードが見つかりませんでした。コードが大きくはっきり写った画像で試してください。"; upStatus.className="camstatus err";
+              });
+            } else {
+              upStatus.textContent="コードが見つかりませんでした。コードが大きくはっきり写った画像で試してください。"; upStatus.className="camstatus err";
+            }
+          };
+          if(window.jsQR){
+            try{
+              var data=sctx.getImageData(0,0,scanCanvas.width,scanCanvas.height);
+              var code=jsQR(data.data, data.width, data.height, {inversionAttempts:"attemptBoth"});
+              if(code && code.data){ done(code.data); return; }
+            }catch(e){/* fall through */}
+          }
+          tryBD();
+        };
+        img.onerror=function(){ URL.revokeObjectURL(url); upStatus.textContent="画像を読み込めませんでした。別の画像で試してください。"; upStatus.className="camstatus err"; };
+        img.src=url;
+      }
+      fileInput.addEventListener("change", function(){ handleFile(fileInput.files[0]); fileInput.value=""; });
+      ["dragover","dragenter"].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add("drag"); }); });
+      ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove("drag"); }); });
+      drop.addEventListener("drop", function(e){ var f=e.dataTransfer.files && e.dataTransfer.files[0]; handleFile(f); });
+
+      /* ---------- photo mode ---------- */
+      var photoState = null;
+      var photoDrop = $("photoDrop"), photoInput = $("photoInput"), photoStatus = $("photoStatus");
+      function setPhotoStatus(msg, cls){ photoStatus.textContent = msg; photoStatus.className = "camstatus" + (cls ? " " + cls : ""); }
+      function rgbToHsl(r, g, b){
+        r /= 255; g /= 255; b /= 255;
+        var mx = Math.max(r, g, b), mn = Math.min(r, g, b), h = 0, sat = 0, l = (mx + mn) / 2;
+        if(mx !== mn){
+          var d = mx - mn;
+          sat = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+          if(mx === r) h = (g - b) / d + (g < b ? 6 : 0);
+          else if(mx === g) h = (b - r) / d + 2;
+          else h = (r - g) / d + 4;
+          h *= 60;
+        }
+        return { h:h, s:sat, l:l };
+      }
+      function toHex(r, g, b){
+        return "#" + ("0" + r.toString(16)).slice(-2) + ("0" + g.toString(16)).slice(-2) + ("0" + b.toString(16)).slice(-2);
+      }
+      function fillColorChips(container, topColors){
+        container.textContent = "";
+        topColors.forEach(function(c){
+          var chip = document.createElement("span"); chip.className = "colorchip";
+          var sw = document.createElement("i"); sw.style.background = c.hex;
+          var tx = document.createElement("span"); tx.textContent = c.hex + " · " + (c.ratio * 100).toFixed(1) + "%";
+          chip.appendChild(sw); chip.appendChild(tx);
+          container.appendChild(chip);
+        });
+      }
+      function fillFeatList(dl, f){
+        dl.textContent = "";
+        var tier = f.edgeDensity < 0.08 ? "少ない（単純なリズム）" : (f.edgeDensity < 0.20 ? "中くらい" : "多い（複雑なリズム）");
+        var rows = [
+          ["主要な色相", f.dominantHueBin >= 0 ? HUE_NAMES[f.dominantHueBin] + "（" + f.dominantHueDeg + "°）" : "なし（無彩色が多い）"],
+          ["明るさの平均", Math.round(f.meanLum * 100) + "% → BPM " + (60 + Math.round(f.meanLum * 100))],
+          ["彩度の平均", Math.round(f.meanSat * 100) + "% → 音の強さ " + (1 + Math.round(f.meanSat * 9)) + " / 10"],
+          ["色の変化の量", f.edgeDensity.toFixed(3) + " → " + tier],
+          ["マスの数", "177 × 177（31,329マス）"]
+        ];
+        rows.forEach(function(r){
+          var dt = document.createElement("dt"); dt.textContent = r[0];
+          var dd = document.createElement("dd"); dd.textContent = r[1];
+          dl.appendChild(dt); dl.appendChild(dd);
+        });
+      }
+      var scanAnimId = null;
+      function renderPhotoPreview(animate, done){
+        if(!photoState) { if(done) done(); return; }
+        $("photoPreview").classList.remove("hidden");
+        fillColorChips($("photoColors"), photoState.features.topColors);
+        fillFeatList($("photoFeats"), photoState.features);
+        if(animate){ animateMosaicScan(done); }
+        else {
+          var mc = $("mosaicCanvas");
+          mc.getContext("2d").putImageData(new ImageData(photoState.grid, 177, 177), 0, 0);
+          var wrap0 = $("mosaicWrap"); if(wrap0) wrap0.classList.add("grid-on");
+          if(done) done();
+        }
+      }
+      function animateMosaicScan(done){
+        if(!photoState){ if(done) done(); return; }
+        var wrap = $("mosaicWrap"), canvas = $("mosaicCanvas");
+        if(!wrap || !canvas){ if(done) done(); return; }
+        var ctx = canvas.getContext("2d");
+        var beam = $("scanBeam"), hud = $("scanHudText"), bar = $("scanBar");
+        var full = document.createElement("canvas"); full.width = 177; full.height = 177;
+        full.getContext("2d").putImageData(new ImageData(photoState.grid, 177, 177), 0, 0);
+        var reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if(reduced){
+          ctx.putImageData(new ImageData(photoState.grid, 177, 177), 0, 0);
+          wrap.classList.remove("scanning"); wrap.classList.add("grid-on");
+          if(done) done(); return;
+        }
+        if(scanAnimId) cancelAnimationFrame(scanAnimId);
+        wrap.classList.remove("grid-on"); wrap.classList.add("scanning");
+        if(beam) beam.style.top = "0%";
+        if(bar) bar.style.width = "0%";
+        if(hud) hud.textContent = "スキャン中 — 0 / 177 行 · 0 / 31,329 マス";
+        var DURATION = 1900, start = null;
+        function frame(ts){
+          if(!start) start = ts;
+          var t = Math.min(1, (ts - start) / DURATION);
+          var row = Math.floor(t * 177);
+          ctx.fillStyle = "#111110"; ctx.fillRect(0, 0, 177, 177);
+          /* unscanned area: faint ghost of the photo so the scan reads as revealing */
+          ctx.save(); ctx.globalAlpha = 0.16; ctx.drawImage(full, 0, 0); ctx.restore();
+          if(row > 0) ctx.drawImage(full, 0, 0, 177, row, 0, 0, 177, row);
+          if(row < 177){ ctx.fillStyle = "#FF3D00"; ctx.fillRect(0, row, 177, 1); }
+          if(beam) beam.style.top = (t * 100) + "%";
+          if(hud) hud.textContent = "スキャン中 — " + row + " / 177 行 · " + (row * 177).toLocaleString("ja-JP") + " / 31,329 マス";
+          if(bar) bar.style.width = Math.round(t * 100) + "%";
+          if(t < 1){ scanAnimId = requestAnimationFrame(frame); }
+          else {
+            ctx.putImageData(new ImageData(photoState.grid, 177, 177), 0, 0);
+            if(hud) hud.textContent = "スキャン完了 — 177 / 177 行 · 31,329 / 31,329 マス";
+            if(bar) bar.style.width = "100%";
+            scanAnimId = null;
+            setTimeout(function(){
+              wrap.classList.remove("scanning"); wrap.classList.add("grid-on");
+              if(done) done();
+            }, 420);
+          }
+        }
+        scanAnimId = requestAnimationFrame(frame);
+      }
+      /* 結果側のモザイク：表示されるたびにスキャンを自動で再生し、その後もゆっくり繰り返す */
+      function playResultScan(){
+        var rmw = $("resultMosaicWrap");
+        if(!rmw) return;
+        rmw.classList.remove("scanning","autoplay");
+        void rmw.offsetWidth; /* アニメーションを確実に最初から再生させる */
+        rmw.classList.add("grid-on","scanning","autoplay");
+        setTimeout(function(){ rmw.classList.remove("scanning"); rmw.classList.add("grid-on","autoplay"); }, 1250);
+      }
+      /* 写真プレビューが見えている間は、スキャンを自動で繰り返し再生する（操作不要） */
+      setInterval(function(){
+        try{
+          if(!photoState || scanAnimId) return;
+          if(document.visibilityState && document.visibilityState!=="visible") return;
+          if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+          var active=document.querySelector(".tab.active");
+          if(!active || active.getAttribute("data-tab")!=="photo") return;
+          var wrap=$("mosaicWrap"); if(!wrap) return;
+          var rect=wrap.getBoundingClientRect();
+          if(rect.bottom<0 || rect.top>window.innerHeight) return;
+          animateMosaicScan(null);
+        }catch(e){/* 自動再生で本体の処理は止めない */}
+      }, 12000);
+      function sha256DigestBytes(u8){
+        if(window.crypto && crypto.subtle){
+          var copy = new Uint8Array(u8.length); copy.set(u8);
+          return crypto.subtle.digest("SHA-256", copy.buffer).then(function(buf){
+            var bytes = new Uint8Array(buf), hex = "";
+            for(var i = 0; i < bytes.length; i++) hex += ("0" + bytes[i].toString(16)).slice(-2);
+            return { hex:hex, bytes:bytes };
+          });
+        }
+        var str = "";
+        for(var j = 0; j < u8.length; j += 8192){
+          str += String.fromCharCode.apply(null, u8.subarray(j, j + 8192));
+        }
+        var hex2 = sha256Fallback(str), bytes2 = new Uint8Array(32);
+        for(var k = 0; k < 32; k++) bytes2[k] = parseInt(hex2.substr(k * 2, 2), 16);
+        return Promise.resolve({ hex:hex2, bytes:bytes2 });
+      }
+      function generatePhoto(){
+        if(!photoState) return;
+        var st = photoState;
+        sha256DigestBytes(st.hashInput).then(function(r1){
+          return sha256DigestBytes(st.hashInput).then(function(r2){
+            return { hex:r1.hex, bytes:r1.bytes, verified:(r1.hex === r2.hex) };
+          });
+        }).then(function(res){
+          var genome = buildPhotoGenome(res.bytes, st.features);
+          var prompts = buildPrompts(genome);
+          runProcessing(res.hex, function(){
+            renderResults("写真：" + st.name, "写真モード", res.hex, res.bytes, genome, prompts, res.verified, { photo:st });
+            resultsEl.scrollIntoView({ behavior:"smooth", block:"start" });
+          });
+        });
+      }
+      function handlePhotoFile(file){
+        if(!file) return;
+        if(!/^image\//.test(file.type)){ setPhotoStatus("画像ファイルを選んでください。", "err"); return; }
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function(){
+          var side = Math.min(img.naturalWidth, img.naturalHeight);
+          var sx = (img.naturalWidth - side) / 2, sy = (img.naturalHeight - side) / 2;
+          var c = document.createElement("canvas"); c.width = 177; c.height = 177;
+          var cx = c.getContext("2d", { willReadFrequently:true });
+          cx.drawImage(img, sx, sy, side, side, 0, 0, 177, 177);
+          URL.revokeObjectURL(url);
+          var data = cx.getImageData(0, 0, 177, 177).data;
+          var N = 177 * 177;
+          var levels = new Uint8Array(N * 3);
+          var grid = new Uint8ClampedArray(N * 4);
+          var hueHist = new Float64Array(12), hueWeight = 0;
+          var lumSum = 0, satSum = 0, bins = {};
+          for(var i = 0; i < N; i++){
+            var r = data[i * 4], g = data[i * 4 + 1], b = data[i * 4 + 2];
+            var lr = r >> 5, lg = g >> 5, lb = b >> 5;
+            levels[i * 3] = lr; levels[i * 3 + 1] = lg; levels[i * 3 + 2] = lb;
+            var qr = Math.round(lr * 255 / 7), qg = Math.round(lg * 255 / 7), qb = Math.round(lb * 255 / 7);
+            grid[i * 4] = qr; grid[i * 4 + 1] = qg; grid[i * 4 + 2] = qb; grid[i * 4 + 3] = 255;
+            var hsl = rgbToHsl(qr, qg, qb);
+            lumSum += (0.2126 * qr + 0.7152 * qg + 0.0722 * qb) / 255;
+            satSum += hsl.s;
+            if(hsl.s > 0.12){ var hb = Math.floor(hsl.h / 30) % 12; hueHist[hb] += hsl.s; hueWeight += hsl.s; }
+            var key = (lr << 6) | (lg << 3) | lb;
+            var bin = bins[key] || (bins[key] = { count:0, r:0, g:0, b:0 });
+            bin.count++; bin.r += qr; bin.g += qg; bin.b += qb;
+          }
+          var edgeSum = 0, edgeCount = 0;
+          for(var y = 0; y < 177; y++){
+            for(var x = 0; x < 177; x++){
+              var idx = (y * 177 + x) * 4;
+              if(x < 176){
+                edgeSum += (Math.abs(grid[idx] - grid[idx + 4]) + Math.abs(grid[idx + 1] - grid[idx + 5]) + Math.abs(grid[idx + 2] - grid[idx + 6])) / (3 * 255);
+                edgeCount++;
+              }
+              if(y < 176){
+                var idx2 = idx + 177 * 4;
+                edgeSum += (Math.abs(grid[idx] - grid[idx2]) + Math.abs(grid[idx + 1] - grid[idx2 + 1]) + Math.abs(grid[idx + 2] - grid[idx2 + 2])) / (3 * 255);
+                edgeCount++;
+              }
+            }
+          }
+          var domBin = -1, domVal = 0;
+          for(var hi = 0; hi < 12; hi++){ if(hueHist[hi] > domVal){ domVal = hueHist[hi]; domBin = hi; } }
+          if(hueWeight === 0) domBin = -1;
+          var topColors = Object.keys(bins).map(function(k){ return bins[k]; })
+            .sort(function(a, b){ return b.count - a.count; })
+            .slice(0, 3)
+            .map(function(bin){
+              var rr = Math.round(bin.r / bin.count), gg = Math.round(bin.g / bin.count), bb = Math.round(bin.b / bin.count);
+              var hh = rgbToHsl(rr, gg, bb);
+              return { hex:toHex(rr, gg, bb), ratio:bin.count / N, hueBin:Math.floor(hh.h / 30) % 12, sat:hh.s };
+            });
+          var features = {
+            dominantHueBin: domBin,
+            dominantHueDeg: domBin >= 0 ? domBin * 30 + 15 : -1,
+            meanLum: lumSum / N,
+            meanSat: satSum / N,
+            edgeDensity: edgeCount ? edgeSum / edgeCount : 0,
+            topColors: topColors
+          };
+          photoState = { name:file.name, hashInput:levels, grid:grid, features:features };
+          setPhotoStatus("177×177マスをスキャンしています…");
+          renderPhotoPreview(true, function(){
+            setPhotoStatus("スキャンしました。同じ写真からは毎回同じプロンプトが生成されます。", "ok");
+            generatePhoto();
+          });
+        };
+        img.onerror = function(){ URL.revokeObjectURL(url); setPhotoStatus("画像を読み込めませんでした。別の画像で試してください。", "err"); };
+        img.src = url;
+      }
+      photoInput.addEventListener("change", function(){ handlePhotoFile(photoInput.files[0]); photoInput.value = ""; });
+      ["dragover","dragenter"].forEach(function(ev){ photoDrop.addEventListener(ev, function(e){ e.preventDefault(); photoDrop.classList.add("drag"); }); });
+      ["dragleave","drop"].forEach(function(ev){ photoDrop.addEventListener(ev, function(e){ e.preventDefault(); photoDrop.classList.remove("drag"); }); });
+      photoDrop.addEventListener("drop", function(e){ var f = e.dataTransfer.files && e.dataTransfer.files[0]; handlePhotoFile(f); });
+      var btnRescan = $("btnRescan");
+      if(btnRescan){
+        btnRescan.addEventListener("click", function(){
+          if(!photoState){ setPhotoStatus("先に写真を選んでください。", "err"); return; }
+          setPhotoStatus("177×177マスをスキャンしています…");
+          animateMosaicScan(function(){ setPhotoStatus("スキャンしました。同じ写真からは毎回同じプロンプトが生成されます。", "ok"); });
+        });
+      }
+
+      /* ---------- samples ---------- */
+      document.querySelectorAll(".chip[data-sample]").forEach(function(chip){
+        chip.addEventListener("click", function(){
+          textInput.value=chip.getAttribute("data-sample");
+          textInput.focus();
+        });
+      });
+
+      /* ================================================================
+         GENERATE — 演出（決定的）→ 結果描画
+         ================================================================ */
+      function runProcessing(hex, done){
+        processingEl.classList.add("on");
+        emptyEl.classList.add("hidden"); resultsEl.classList.add("hidden");
+        var steps=processingEl.querySelectorAll(".step");
+        steps.forEach(function(s){ s.className="step"; });
+        var live=$("liveHash"); live.textContent="";
+        var i=0;
+        var stepTimer=setInterval(function(){
+          if(i>0){ steps[i-1].className="step done"; steps[i-1].textContent=steps[i-1].textContent.replace(" …"," ✓"); }
+          if(i>=steps.length){ clearInterval(stepTimer); clearInterval(hashTimer); processingEl.classList.remove("on"); done(); return; }
+          steps[i].className="step act"; i++;
+        }, 260);
+        var pos=0;
+        var hashTimer=setInterval(function(){
+          pos=Math.min(hex.length, pos+4);
+          live.textContent="0x "+hex.slice(0,pos);
+          if(pos>=hex.length) clearInterval(hashTimer);
+        }, 30);
+        processingEl.scrollIntoView({behavior:"smooth", block:"nearest"});
+      }
+
+      function renderResults(input, via, hex, bytes, genome, prompts, verified, opts){
+        opts=opts||{};
+        /* --- raw (textContent only: 絶対に innerHTML に入れない) --- */
+        var cls=classify(input);
+        $("rawTitle").textContent = opts.photo ? "使った写真" : "読み取った内容";
+        $("rawBox").textContent=input;
+        $("rawType").textContent = opts.photo ? "写真（177×177マスに分割）" : cls.type;
+        $("rawLen").textContent = opts.photo ? "31,329 マス" : input.length+" 文字";
+        $("rawVia").textContent=via;
+        var safe=$("safeLine");
+        if(opts.photo){
+          safe.className="safeline";
+          $("safeText").textContent="処理はすべてこの端末の中で行い、写真を外部に送信することはありません。写真そのものではなく、量子化した色データの特徴量とハッシュ値から生成しています。";
+        } else if(cls.url){
+          safe.className="safeline warnline";
+          $("safeText").textContent="URL形式の文字列です。安全のためリンク化せず、自動で開くこともありません。";
+        } else if(!opts.photo) {
+          safe.className="safeline";
+          $("safeText").textContent="安全のため、読み取った内容はリンク化せず、自動で開くこともありません。テキストとしてのみ表示します。";
+        }
+
+        /* --- hash --- */
+        var grid=$("hashGrid"); grid.textContent="";
+        for(var i=0;i<hex.length;i+=2){
+          var span=document.createElement("span");
+          span.className="b"; span.textContent=hex.substr(i,2);
+          grid.appendChild(span);
+          if(i<hex.length-2) grid.appendChild(document.createTextNode(" "));
+        }
+        $("verifyLine").innerHTML="";
+        var v=document.createElement("span");
+        v.textContent = verified
+          ? "再計算しても一致しました — 同じ入力からは常に同じ結果になります"
+          : "検証できませんでした";
+        if(verified) v.className="ok";
+        $("verifyLine").appendChild(v);
+
+        /* --- photo features --- */
+        var pc=$("photoCard");
+        if(opts.photo){
+          pc.classList.remove("hidden");
+          $("photoResultCanvas").getContext("2d").putImageData(new ImageData(opts.photo.grid, 177, 177), 0, 0);
+          playResultScan();
+          fillColorChips($("photoResultColors"), opts.photo.features.topColors);
+          fillFeatList($("photoResultFeats"), opts.photo.features);
+          $("mapDesc").textContent="写真の特徴量とハッシュが、どの要素を選んだかを示しています。";
+          $("mapBasisHead").textContent="根拠（特徴量／バイト）";
+        } else {
+          pc.classList.add("hidden");
+          $("mapDesc").textContent="ハッシュのどのバイトが、どの要素を選んだかを示しています。";
+          $("mapBasisHead").textContent="根拠（バイト）";
+        }
+
+        /* --- japanese summary --- */
+        try{
+          var sum=buildJapaneseSummary(genome);
+          $("summaryLead").textContent=sum.lead;
+          $("summaryBody").textContent=sum.body;
+          var sp=$("summaryPoints"); sp.textContent="";
+          sum.points.forEach(function(pt){
+            var li=document.createElement("li");
+            var lab=document.createElement("span"); lab.textContent=pt[0];
+            var val=document.createElement("b"); val.textContent=pt[1];
+            li.appendChild(lab); li.appendChild(val); sp.appendChild(li);
+          });
+          var sv=$("summaryVariants"); sv.textContent="";
+          sum.variants.forEach(function(v){
+            var p=document.createElement("p");
+            var b=document.createElement("b"); b.textContent=v.label+" — ";
+            p.appendChild(b); p.appendChild(document.createTextNode(v.text));
+            sv.appendChild(p);
+          });
+        }catch(e){ $("summaryLead").textContent=""; $("summaryBody").textContent=""; }
+
+        /* --- prompts --- */
+        var list=$("promptList"); list.textContent="";
+        prompts.forEach(function(p, idx){
+          var card=document.createElement("section");
+          card.className="card promptcard";
+          var head=document.createElement("div"); head.className="phead";
+          var kind=document.createElement("span"); kind.className="kind"+(idx===1?" c2":idx===2?" c3":""); kind.textContent=p.kind;
+          var name=document.createElement("span"); name.className="pname"; name.textContent=p.name;
+          head.appendChild(kind); head.appendChild(name);
+          var desc=document.createElement("p"); desc.className="pdesc"; desc.textContent=p.desc;
+          var box=document.createElement("div"); box.className="codebox";
+          var pre=document.createElement("pre"); pre.textContent=p.text;
+          var btn=document.createElement("button"); btn.className="copybtn"; btn.type="button";
+          btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー';
+          btn.addEventListener("click", function(){ copyText(p.text, btn); });
+          box.appendChild(pre); box.appendChild(btn);
+          var cc=document.createElement("div"); cc.className="charcount";
+          cc.textContent=p.text.length+" / 1000 chars";
+          card.appendChild(head); card.appendChild(desc); card.appendChild(box); card.appendChild(cc);
+          list.appendChild(card);
+        });
+
+        /* --- mapping table --- */
+        var rows=[
+          ["ジャンル", genome.genre],["サブジャンル", genome.subgenre],["ムード", genome.mood],
+          ["楽器 1", genome.instruments[0]],["楽器 2", genome.instruments[1]],["楽器 3", genome.instruments[2]],
+          ["ボーカル", genome.vocal],["リズム", genome.rhythm],["プロダクション", genome.production],
+          ["キー", genome.key],["構成", genome.structure],
+          ["第2ジャンル（引き算・クロスオーバー用）", genome.genreAlt],["第2リズム（引き算用）", genome.rhythmAlt],["第2ボーカル（引き算・クロスオーバー用）", genome.vocalAlt]
+        ];
+        if(opts.photo){
+          rows=[
+            ["ジャンル（色相）", genome.genre],["ムード（色相）", genome.mood],["キー（色相→五度圏）", genome.key],
+            ["楽器 1（割合1位の色）", genome.instruments[0]],["楽器 2（割合2位の色）", genome.instruments[1]],["楽器 3（割合3位の色）", genome.instruments[2]],
+            ["リズム（色の変化の量）", genome.rhythm],["プロダクション（彩度）", genome.production],
+            ["ボーカル", genome.vocal],["構成", genome.structure],
+            ["第2ジャンル（引き算・クロスオーバー用）", genome.genreAlt],["第2リズム（引き算用）", genome.rhythmAlt],["第2ボーカル（引き算・クロスオーバー用）", genome.vocalAlt]
+          ];
+        }
+        var tb=$("mapBody"); tb.textContent="";
+        rows.forEach(function(r){
+          var tr=document.createElement("tr");
+          var td1=document.createElement("td"); td1.textContent=r[0];
+          var td2=document.createElement("td"); td2.className="mono";
+          td2.textContent = r[1].basis ? r[1].basis : "byte["+r[1].offset+"] = 0x"+("0"+r[1].byte.toString(16)).slice(-2);
+          var td3=document.createElement("td"); td3.className="mono"; td3.textContent="#"+r[1].index;
+          var td4=document.createElement("td"); td4.className="val"; td4.textContent=r[1].value;
+          tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tr.appendChild(td4);
+          tb.appendChild(tr);
+        });
+        var trB=document.createElement("tr");
+        trB.innerHTML="";
+        var b1=document.createElement("td"); b1.textContent="BPM";
+        var b2=document.createElement("td"); b2.className="mono"; b2.textContent = opts.photo ? ("明るさの平均 "+Math.round(opts.photo.features.meanLum*100)+"%") : "byte[20] = 0x"+("0"+bytes[20].toString(16)).slice(-2);
+        var b3=document.createElement("td"); b3.className="mono"; b3.textContent = opts.photo ? ("60 + "+Math.round(opts.photo.features.meanLum*100)) : "60 + "+(bytes[20]%101);
+        var b4=document.createElement("td"); b4.className="val"; b4.textContent=genome.bpm+" BPM";
+        trB.appendChild(b1); trB.appendChild(b2); trB.appendChild(b3); trB.appendChild(b4);
+        tb.appendChild(trB);
+
+        /* --- history --- */
+        var exists=history.some(function(h){return h.input===input;});
+        if(!exists){ history.unshift({input:input, genre:genome.genre.value, hex:hex, photo:opts.photo||null}); if(history.length>8) history.pop(); }
+        var hl=$("histList"); hl.textContent="";
+        history.forEach(function(h){
+          var b=document.createElement("button"); b.className="histitem"; b.type="button";
+          var hs=document.createElement("span"); hs.className="h"; hs.textContent=h.hex.slice(0,10)+"…";
+          var ts=document.createElement("span"); ts.className="t"; ts.textContent=h.input;
+          var gs=document.createElement("span"); gs.className="g"; gs.textContent=h.genre;
+          b.appendChild(hs); b.appendChild(ts); b.appendChild(gs);
+          b.addEventListener("click", function(){
+            if(h.photo){ photoState=h.photo; setPhotoStatus("履歴の写真を復元しました。177×177マスをスキャンしています…"); renderPhotoPreview(true, function(){ setPhotoStatus("スキャンしました。同じ写真からは毎回同じプロンプトが生成されます。","ok"); generatePhoto(); }); }
+            else { textInput.value=h.input; generate(h.input,"履歴から再生成"); }
+          });
+          hl.appendChild(b);
+        });
+
+        resultsEl.classList.remove("hidden");
+      }
+
+      function generate(input, via){
+        input=(input||"").trim();
+        if(!input){
+          if(lastScanned){ input=lastScanned; via=lastVia; textInput.value=input; }
+          else { toast("テキストを入力してください"); textInput.focus(); return; }
+        }
+        via=via||"テキスト入力";
+        sha256Hex(input).then(function(r1){
+          /* 決定論の自己検証: もう一度計算して一致を確認 */
+          return sha256Hex(input).then(function(r2){
+            return { hex:r1.hex, bytes:r1.bytes, verified:(r1.hex===r2.hex) };
+          });
+        }).then(function(res){
+          var genome=buildGenome(res.bytes);
+          var prompts=buildPrompts(genome);
+          runProcessing(res.hex, function(){
+            renderResults(input, via, res.hex, res.bytes, genome, prompts, res.verified);
+            resultsEl.scrollIntoView({behavior:"smooth", block:"start"});
+          });
+        });
+      }
+
+      $("btnGenerate").addEventListener("click", function(){
+        var activeTab=document.querySelector(".tab.active");
+        var mode=activeTab ? activeTab.getAttribute("data-tab") : "photo";
+        if(mode==="photo"){
+          if(photoState){
+            setPhotoStatus("177×177マスをスキャンしています…");
+            animateMosaicScan(function(){ setPhotoStatus("スキャンしました。同じ写真からは毎回同じプロンプトが生成されます。", "ok"); generatePhoto(); });
+          }
+          else { setPhotoStatus("先に写真を選んでください。", "err"); toast("先に写真を選んでください"); }
+          return;
+        }
+        if(mode==="image"){
+          if(lastScanned){ generate(lastScanned, "画像アップロード"); }
+          else { upStatus.textContent="先にQRコードやバーコードの画像を選んでください。"; upStatus.className="camstatus err"; }
+          return;
+        }
+        var v=textInput.value.trim();
+        generate(v, v ? "テキスト入力" : undefined);
+      });
+
+      /* ---------- copy ---------- */
+      function copyText(text, btn){
+        function done(){
+          if(btn){ btn.classList.add("done"); var old=btn.innerHTML; btn.textContent="コピー済み"; setTimeout(function(){ btn.classList.remove("done"); btn.innerHTML=old; },1600); }
+          toast("コピーしました");
+        }
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(); });
+        } else { fallback(); }
+        function fallback(){
+          var ta=document.createElement("textarea");
+          ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+          document.body.appendChild(ta); ta.select();
+          try{ document.execCommand("copy"); done(); }catch(e){ toast("コピーできませんでした"); }
+          document.body.removeChild(ta);
+        }
+      }
+    })();
+    </script>
+    <script>
+    /* Scroll reveal — 画面に入った要素の文字を、下から順に立ち上げる。
+       対応していない環境と「視差効果を減らす」設定では何も隠さず、そのまま表示する。 */
+    (function(){
+      "use strict";
+      if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if(!("IntersectionObserver" in window)) return;
+      var io=new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if(e.isIntersecting){ e.target.classList.add("rv-in"); io.unobserve(e.target); }
+        });
+      },{threshold:.08,rootMargin:"0px 0px -6% 0px"});
+      function prep(el,delay,cls){
+        if(!el || el.classList.contains("rv")) return;
+        if(cls) el.classList.add(cls);
+        el.classList.add("rv");
+        el.style.setProperty("--rv-d",(delay||0)+"ms");
+        io.observe(el);
+      }
+      function prepAll(sel,base,step,cls){
+        document.querySelectorAll(sel).forEach(function(el,i){ prep(el,(base||0)+(step||0)*i,cls); });
+      }
+      /* ヒーロー：読み込み直後に、目線の流れ順で段階的に */
+      prep(document.querySelector(".masthead"),0,"rv-down");
+      prep(document.querySelector(".hero-eyebrow"),0);
+      prep(document.querySelector("header.top h1"),90,"rv-hero");
+      prep(document.querySelector("header.top .lead"),230);
+      prep(document.querySelector("header.top .stats"),340);
+      prep(document.querySelector("header.top .stats + p"),430);
+      prep(document.querySelector("header.top .hero-visual"),200);
+      /* 本体：スマホで下へ進むたびに、見出しや文章が立ち上がる。
+         操作部品（タブ／生成ボタン）を含むパネル自体は隠さず、中のテキストだけを対象にする */
+      prep(document.querySelector(".grid .panel h2"),0);
+      prep(document.querySelector(".grid .panel .sub"),70);
+      prep(document.querySelector(".privacy-note"),130);
+      prep(document.querySelector("#pane-photo .pane-lead"),190);
+      prep(document.getElementById("emptyState"),110);
+      prep(document.querySelector(".how h2"),0);
+      prepAll(".how .stepcard",0,110);
+      prep(document.querySelector("footer"),0);
+      /* フォールバック：画面内にあるのに対象が発火しなかった要素は、少し待って必ず表示する */
+      var sweeps=0;
+      var sweepTimer=setInterval(function(){
+        sweeps++;
+        document.querySelectorAll(".rv:not(.rv-in)").forEach(function(el){
+          var r=el.getBoundingClientRect();
+          if(r.bottom>0 && r.top<window.innerHeight){ el.classList.add("rv-in"); io.unobserve(el); }
+        });
+        if(sweeps>=4) clearInterval(sweepTimer);
+      },700);
+    })();
+    </script>
+  </body>
+</html>
